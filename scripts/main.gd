@@ -392,7 +392,9 @@ func mine_dig() -> void:
 		return
 	mine_energy -= 1.0
 	var reward := float(20 * pickaxe_level * mine_depth)
+	reward *= prestige_multiplier()
 	money += reward
+	run_earned += reward
 	ore += pickaxe_level
 	var chance := minf(0.60, 0.03 + float(luck_level) * 0.01 + float(mine_depth - 1) * 0.002)
 	if randf() < chance:
@@ -456,7 +458,7 @@ func refresh_header() -> void:
 	if header == null:
 		return
 	header.text = "밑바닥 인생     %s원" % number(money)
-	income_label.text = "터치 +%s원     자동 +%s원/초" % [number(tap_level * 10.0), number(total_auto_income())]
+	income_label.text = "터치 +%s원     자동 +%s원/초" % [number(float(tap_level) * 10.0 * prestige_multiplier()), number(total_auto_income() * prestige_multiplier())]
 
 func number(n: float) -> String:
 	if n >= 1000000000000.0:
@@ -590,8 +592,10 @@ func build_street() -> void:
 	decorate_button(auto_upgrade, true)
 
 func tap_money() -> void:
-	money += tap_level * 10.0
-	feedback.text = "+%s원!" % number(tap_level * 10.0)
+	var earned := float(tap_level) * 10.0 * prestige_multiplier()
+	money += earned
+	run_earned += earned
+	feedback.text = "+%s원!" % number(earned)
 	spawn_floating_money()
 	if is_instance_valid(hero_sprite):
 		if pop_tween and pop_tween.is_running():
@@ -605,7 +609,7 @@ func tap_money() -> void:
 func spawn_floating_money() -> void:
 	if not is_instance_valid(float_layer):
 		return
-	var label := make_label("+%s" % number(tap_level * 10.0), 34)
+	var label := make_label("+%s" % number(float(tap_level) * 10.0 * prestige_multiplier()), 34)
 	label.add_theme_color_override("font_color", Color("#ffd37b"))
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.position = Vector2(float_layer.size.x * randf_range(0.30, 0.65), float_layer.size.y * randf_range(0.35, 0.65))
