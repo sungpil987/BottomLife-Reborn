@@ -319,6 +319,7 @@ func refresh_upgrade_buttons() -> void:
 			mine_buttons[1].disabled = money < mine_upgrade_cost()
 		if is_instance_valid(mine_buttons[2]):
 			mine_buttons[2].disabled = ore < mine_depth_cost() or next_mine_rebirth_requirement() > rebirth_count
+			mine_buttons[2].text = mine_depth_button_text()
 	if is_instance_valid(business_income_label):
 		business_income_label.text = "사업 수익  +%s원/초" % number((total_auto_income() - float(auto_level) * 5.0) * prestige_multiplier())
 	for i in range(business_buttons.size()):
@@ -924,6 +925,8 @@ func craft_cost(kind: int) -> int:
 	return 3 + level * 2 + int(level * level / 4)
 
 func craft_equipment(kind: int) -> void:
+	if kind < 0 or kind > 1:
+		return
 	var level := drill_level if kind == 0 else refinery_level
 	var cost := craft_cost(kind)
 	if level >= 50 or rare_ore < cost:
@@ -1002,6 +1005,15 @@ func mine_go_deeper() -> void:
 	save_game()
 	refresh()
 
+func mine_depth_button_text() -> String:
+	var required: int = next_mine_rebirth_requirement()
+	if required > rebirth_count:
+		return "다음 층 잠김\n환생 %d회 필요" % required
+	var missing: int = maxi(0, mine_depth_cost() - ore)
+	if missing > 0:
+		return "다음 층 내려가기\n광석 %d개 부족" % missing
+	return "다음 층 내려가기\n광석 %d개 사용" % mine_depth_cost()
+
 func build_mine() -> void:
 	content.add_child(make_label("%s  ·  지하 %d층" % [mine_zone_name(), mine_depth], 27))
 	add_goal_hint()
@@ -1059,7 +1071,7 @@ func build_mine() -> void:
 	pick.pressed.connect(mine_upgrade_pickaxe)
 	content.add_child(pick)
 	mine_buttons.append(pick)
-	var deeper := make_button("다음 층 내려가기\n광석 %d개 필요" % mine_depth_cost())
+	var deeper := make_button(mine_depth_button_text())
 	deeper.disabled = ore < mine_depth_cost() or next_mine_rebirth_requirement() > rebirth_count
 	deeper.pressed.connect(mine_go_deeper)
 	content.add_child(deeper)
@@ -1071,14 +1083,14 @@ func build_mine() -> void:
 	for kind in range(2):
 		var level := drill_level if kind == 0 else refinery_level
 		var title := "강화 드릴" if kind == 0 else "정제 설비"
-		var craft := make_button("%s Lv.%d\n광물 %d개" % [title, level, craft_cost(kind)])
+		var craft := make_button("%s Lv.%d\n%s" % [title, level, "최대 레벨" if level >= 50 else "광물 %d개" % craft_cost(kind)])
 		craft.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		craft.add_theme_font_size_override("font_size", 19)
 		craft.disabled = level >= 50 or rare_ore < craft_cost(kind)
 		craft.pressed.connect(craft_equipment.bind(kind))
 		equipment_row.add_child(craft)
 		mine_craft_buttons.append(craft)
-	var sell := make_button("희귀 광물 모두 판매 · 개당 %s원" % number(float(2500 * mine_depth) * prestige_multiplier() * (1.0 + float(refinery_level) * 0.1)))
+	var sell := make_button("희귀 광물 %d개 판매 · 총 %s원" % [rare_ore, number(float(rare_ore * 2500 * mine_depth) * prestige_multiplier() * (1.0 + float(refinery_level) * 0.1))])
 	sell.custom_minimum_size.y = 64
 	sell.disabled = rare_ore <= 0
 	sell.pressed.connect(sell_rare_ore)
