@@ -115,6 +115,48 @@ func _run() -> void:
 		push_error("Smoke test: rebirth reset or permanent progression failed")
 		quit(1)
 		return
+	# v7.2: permanent startup capital must survive rebirth and save/load.
+	game.set("soul_points", 200)
+	game.call("buy_legacy_capital")
+	if int(game.get("legacy_capital")) != 1 or int(game.get("soul_points")) != 197:
+		push_error("Smoke test: legacy capital purchase or cost failed")
+		quit(1)
+		return
+	game.set("run_earned", 1000000.0)
+	var capital_rebirth_before: int = int(game.get("rebirth_count"))
+	game.call("perform_rebirth")
+	if int(game.get("rebirth_count")) != capital_rebirth_before + 1 or absf(float(game.get("money")) - 1000.0) > 0.01:
+		push_error("Smoke test: rebirth did not grant permanent startup capital")
+		quit(1)
+		return
+	# v7.3: wealth milestones are claimable once, and persist across restarts.
+	game.set("lifetime_earned", 100000000.0)
+	var soul_before_wealth: int = int(game.get("soul_points"))
+	game.call("claim_wealth", 0)
+	if int(game.get("soul_points")) != soul_before_wealth + 3 or not game.get("claimed_wealth").has(0):
+		push_error("Smoke test: lifetime wealth milestone reward failed")
+		quit(1)
+		return
+	game.call("claim_wealth", 0)
+	if int(game.get("soul_points")) != soul_before_wealth + 3:
+		push_error("Smoke test: lifetime wealth milestone rewarded twice")
+		quit(1)
+		return
+	game.call("claim_wealth", 2)
+	if game.get("claimed_wealth").has(2):
+		push_error("Smoke test: locked wealth milestone claimed prematurely")
+		quit(1)
+		return
+	game.call("save_game")
+	game.queue_free()
+	await process_frame
+	game = scene.instantiate()
+	root.add_child(game)
+	await process_frame
+	if int(game.get("legacy_capital")) != 1 or not game.get("claimed_wealth").has(0) or float(game.get("lifetime_earned")) < 100000000.0:
+		push_error("Smoke test: permanent wealth progress lost after restart")
+		quit(1)
+		return
 	# A corrupted primary save must recover from the previous valid backup.
 	game.call("save_game")
 	if not FileAccess.file_exists("user://bottomlife_v1.backup.json"):
@@ -161,7 +203,7 @@ func _run() -> void:
 		push_error("Smoke test: missing primary save recovery failed")
 		quit(1)
 		return
-	print("SMOKE TEST PASSED: scene, tabs, tapping, business, mining, rebirth, save restart, corrupt/missing backup recovery")
+	print("SMOKE TEST PASSED: scene, tabs, tapping, business, mining, rebirth, legacy capital, lifetime wealth claims, save restart, corrupt/missing backup recovery")
 	game.queue_free()
 	await process_frame
 	quit(0)
