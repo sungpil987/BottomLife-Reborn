@@ -69,6 +69,8 @@ var pop_tween: Tween
 var street_hit_clock: float = 0.0
 var street_hit_phase: int = 0
 var tap_combo: int = 0
+var street_taps: int = 0
+var street_event_label: Label
 var tap_combo_clock: float = 0.0
 var combo_label: Label
 var street_stage: Control
@@ -153,6 +155,7 @@ func load_game() -> void:
 				if value in LEGACY_MILESTONES and not claimed_legacy.has(value):
 					claimed_legacy.append(value)
 		tap_level = maxi(1, int(data.get("tap_level", 1)))
+		street_taps = maxi(0, int(data.get("street_taps", 0)))
 		auto_level = maxi(0, int(data.get("auto_level", 0)))
 		var saved_business = data.get("business_levels", [0, 0, 0])
 		if saved_business is Array:
@@ -181,7 +184,7 @@ func load_game() -> void:
 func save_game() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "mine_dig_counter": mine_dig_counter, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
+		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "street_taps": street_taps, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "mine_dig_counter": mine_dig_counter, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
@@ -360,6 +363,7 @@ func perform_rebirth() -> void:
 	money = 0.0
 	run_earned = 0.0
 	tap_level = 1
+	street_taps = 0
 	auto_level = 0
 	business_levels = [0, 0, 0, 0, 0]
 	mine_depth = 1
@@ -914,6 +918,7 @@ func refresh() -> void:
 	street_stage = null
 	float_layer = null
 	combo_label = null
+	street_event_label = null
 	tap_upgrade_button = null
 	auto_upgrade_button = null
 	refresh_header()
@@ -1089,6 +1094,9 @@ func build_street() -> void:
 	hero_tier_progress.show_percentage = false
 	hero_tier_progress.max_value = 100.0
 	content.add_child(hero_tier_progress)
+	street_event_label = make_label("", 18)
+	content.add_child(street_event_label)
+	street_event_label.text = "거리 이벤트: %s  ·  %d/25 터치" % [street_event_title(), street_taps % 25]
 	update_hero_appearance()
 	combo_label = make_label("연속 터치로 콤보를 쌓아보세요", 18)
 	combo_label.anchor_left = 0.05
@@ -1133,14 +1141,38 @@ func build_street() -> void:
 	auto_upgrade_button = auto_upgrade
 	decorate_button(auto_upgrade, true)
 
+func street_event_title() -> String:
+	match hero_appearance_tier():
+		1:
+			return "노점 손님 몰려옴"
+		2:
+			return "상점 특별 주문"
+		3:
+			return "도시 투자 계약"
+	return "길거리 행운 발견"
+
+func trigger_street_event() -> String:
+	var tier: int = hero_appearance_tier()
+	var reward: float = float(tap_level) * 10.0 * prestige_multiplier() * float(30 + tier * 25)
+	money += reward
+	run_earned += reward
+	if tier >= 2:
+		gems += tier - 1
+	return "%s! +%s원%s" % [street_event_title(), number(reward), " / 보석 +%d" % (tier - 1) if tier >= 2 else ""]
+
 func tap_money() -> void:
 	tap_combo = mini(tap_combo + 1, 100)
+	street_taps += 1
 	tap_combo_clock = 0.0
 	var combo_multiplier: float = 1.0 + float(mini(tap_combo / 10, 10)) * 0.05
 	var earned: float = float(tap_level) * 10.0 * prestige_multiplier() * combo_multiplier
 	money += earned
 	run_earned += earned
 	feedback.text = "+%s원!" % number(earned)
+	if street_taps % 25 == 0:
+		feedback.text = trigger_street_event()
+	if is_instance_valid(street_event_label):
+		street_event_label.text = "거리 이벤트: %s  ·  %d/25 터치" % [street_event_title(), street_taps % 25]
 	if is_instance_valid(combo_label):
 		combo_label.text = "COMBO %d  ·  터치 수익 x%.2f" % [tap_combo, combo_multiplier]
 	spawn_floating_money(earned)
