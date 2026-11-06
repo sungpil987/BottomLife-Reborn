@@ -226,6 +226,7 @@ func make_label(value: String, size: int = 27) -> Label:
 	label.add_theme_color_override("font_color", Color("#f2e7d1"))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.clip_text = false
 	return label
 
 func panel_style(bg: Color, outline: Color, radius: int = 16) -> StyleBoxFlat:
@@ -304,14 +305,14 @@ func build_ui() -> void:
 	add_child(bg)
 	var outer := VBoxContainer.new()
 	outer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	outer.offset_left = 12.0
-	outer.offset_right = -12.0
-	outer.offset_top = 12.0
-	outer.offset_bottom = -12.0
-	outer.add_theme_constant_override("separation", 8)
+	outer.offset_left = 10.0
+	outer.offset_right = -10.0
+	outer.offset_top = 8.0
+	outer.offset_bottom = -8.0
+	outer.add_theme_constant_override("separation", 6)
 	add_child(outer)
 	var top := PanelContainer.new()
-	top.custom_minimum_size.y = 108
+	top.custom_minimum_size.y = 88
 	top.add_theme_stylebox_override("panel", panel_style(Color("#1e1b26"), Color("#ad8652"), 2))
 	outer.add_child(top)
 	var top_box := VBoxContainer.new()
@@ -322,7 +323,7 @@ func build_ui() -> void:
 	hud_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hud_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(hud_frame)
-	header = make_label("", 27)
+	header = make_label("", 25)
 	top_box.add_child(header)
 	income_label = make_label("", 18)
 	top_box.add_child(income_label)
@@ -331,15 +332,15 @@ func build_ui() -> void:
 	content.add_theme_constant_override("separation", 8)
 	outer.add_child(content)
 	var bottom := HBoxContainer.new()
-	bottom.custom_minimum_size.y = 76
-	bottom.add_theme_constant_override("separation", 4)
+	bottom.custom_minimum_size.y = 64
+	bottom.add_theme_constant_override("separation", 3)
 	outer.add_child(bottom)
 	var tabs := ["거리", "사업", "광산", "성장", "메뉴"]
 	for i in range(tabs.size()):
 		var b := make_button(tabs[i])
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.add_theme_font_size_override("font_size", 18)
-		b.custom_minimum_size.y = 72
+		b.add_theme_font_size_override("font_size", 17)
+		b.custom_minimum_size.y = 62
 		decorate_button(b, i == current_tab)
 		b.pressed.connect(change_tab.bind(i))
 		bottom.add_child(b)
@@ -568,7 +569,7 @@ func build_business() -> void:
 		notice.add_theme_color_override("font_color", Color("#f7d38a"))
 		content.add_child(notice)
 	var business_stage := Control.new()
-	business_stage.custom_minimum_size.y = 192
+	business_stage.custom_minimum_size.y = 156
 	business_stage.clip_contents = true
 	content.add_child(business_stage)
 	var art := TextureRect.new()
@@ -606,7 +607,7 @@ func build_business() -> void:
 		call_deferred("restore_detail_scroll", scroll, detail_scroll_position)
 	var rows := VBoxContainer.new()
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rows.add_theme_constant_override("separation", 12)
+	rows.add_theme_constant_override("separation", 8)
 	scroll.add_child(rows)
 	for i in range(BUSINESS_NAMES.size()):
 		var panel := PanelContainer.new()
@@ -636,7 +637,8 @@ func build_business() -> void:
 		var count := business_purchase_count(i)
 		var cost := business_purchase_cost(i, count)
 		var button := make_button("확장 x%d\n%s원" % [count, number(cost)] if count > 0 else "구매 불가")
-		button.custom_minimum_size = Vector2(122, 78)
+		button.custom_minimum_size = Vector2(106, 66)
+		button.add_theme_font_size_override("font_size", 19)
 		button.disabled = count == 0
 		button.pressed.connect(buy_business.bind(i))
 		row.add_child(button)
@@ -905,7 +907,7 @@ func build_mine() -> void:
 	if next_mine_rebirth_requirement() > rebirth_count:
 		content.add_child(make_label("다음 지역 잠김 · 환생 %d회 필요" % next_mine_rebirth_requirement(), 20))
 	var stage := Control.new()
-	stage.custom_minimum_size.y = 170
+	stage.custom_minimum_size.y = 152
 	stage.clip_contents = true
 	content.add_child(stage)
 	var art := TextureRect.new()
@@ -1064,7 +1066,7 @@ func wrap_content_scroll() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var inner := VBoxContainer.new()
 	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	inner.add_theme_constant_override("separation", 8)
+	inner.add_theme_constant_override("separation", 7)
 	var existing := content.get_children()
 	content.add_child(scroll)
 	scroll.add_child(inner)
@@ -1128,7 +1130,7 @@ func build_street() -> void:
 	if offline_report != "":
 		content.add_child(make_label(offline_report, 19))
 	var scene_area := Control.new()
-	scene_area.custom_minimum_size.y = 280
+	scene_area.custom_minimum_size.y = 240
 	scene_area.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	scene_area.clip_contents = true
 	content.add_child(scene_area)
