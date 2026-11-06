@@ -138,15 +138,23 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
 		save_game()
 
+func parse_save_json(raw: String) -> Variant:
+	# JSON.parse() returns an error code without emitting an engine ERROR log.
+	# A corrupt primary save is expected during backup recovery.
+	var parser := JSON.new()
+	if parser.parse(raw) != OK:
+		return null
+	return parser.data if parser.data is Dictionary else null
+
 func load_game() -> void:
 	if not FileAccess.file_exists(SAVE_PATH):
 		return
 	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	if file == null:
 		return
-	var data = JSON.parse_string(file.get_as_text())
+	var data = parse_save_json(file.get_as_text())
 	if not (data is Dictionary) and FileAccess.file_exists(SAVE_BACKUP_PATH):
-		data = JSON.parse_string(FileAccess.get_file_as_string(SAVE_BACKUP_PATH))
+		data = parse_save_json(FileAccess.get_file_as_string(SAVE_BACKUP_PATH))
 		if data is Dictionary:
 			offline_report = "저장 파일 손상 감지 · 이전 백업 복원"
 	if data is Dictionary:
@@ -193,7 +201,7 @@ func load_game() -> void:
 func save_game() -> void:
 	# Keep the last valid save before overwriting the primary file.
 	if FileAccess.file_exists(SAVE_PATH):
-		var previous = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
+		var previous = parse_save_json(FileAccess.get_file_as_string(SAVE_PATH))
 		if previous is Dictionary:
 			DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(SAVE_BACKUP_PATH))
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
