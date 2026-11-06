@@ -21,6 +21,9 @@ var growth_buttons: Array[Button] = []
 var mine_energy: float = 10.0
 var mine_buttons: Array[Button] = []
 var mine_status: Label
+var mine_art: TextureRect
+var mine_effect_layer: Control
+var mine_flash_tween: Tween
 const MINE_MAX_ENERGY := 10.0
 const BUSINESS_NAMES := ["길거리 노점", "분식 가게", "동네 편의점"]
 const BUSINESS_BASE_COST := [1000.0, 15000.0, 150000.0]
@@ -447,6 +450,28 @@ func mine_dig() -> void:
 		last_mine_find = "광석 %d개 획득" % pickaxe_level
 	save_game()
 	refresh()
+	play_mine_hit_effect()
+
+func play_mine_hit_effect() -> void:
+	if not is_instance_valid(mine_art) or not is_instance_valid(mine_effect_layer):
+		return
+	if mine_flash_tween and mine_flash_tween.is_running():
+		mine_flash_tween.kill()
+	mine_art.modulate = Color("#fff0b3")
+	mine_flash_tween = create_tween()
+	mine_flash_tween.tween_property(mine_art, "modulate", Color.WHITE, 0.28)
+	var found_gem := last_mine_find.begins_with("희귀")
+	var flash := make_label("◆ 보석 발견!" if found_gem else "쾅!  +광석", 31)
+	flash.add_theme_color_override("font_color", Color("#8ef4ff") if found_gem else Color("#ffe0a0"))
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	flash.position = Vector2(115, 82)
+	mine_effect_layer.add_child(flash)
+	var motion := create_tween()
+	motion.set_parallel(true)
+	motion.tween_property(flash, "position:y", 15.0, 0.8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	motion.tween_property(flash, "modulate:a", 0.0, 0.8)
+	motion.set_parallel(false)
+	motion.tween_callback(flash.queue_free)
 
 func mine_upgrade_pickaxe() -> void:
 	var cost := mine_upgrade_cost()
@@ -468,13 +493,23 @@ func mine_go_deeper() -> void:
 
 func build_mine() -> void:
 	content.add_child(make_label("폐광 탐험  ·  지하 %d층" % mine_depth, 31))
+	var stage := Control.new()
+	stage.custom_minimum_size.y = 230
+	stage.clip_contents = true
+	content.add_child(stage)
 	var art := TextureRect.new()
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	art.texture = load("res://assets/mine_cave.svg")
 	art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.custom_minimum_size.y = 230
-	content.add_child(art)
+	stage.add_child(art)
+	mine_art = art
+	mine_effect_layer = Control.new()
+	mine_effect_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mine_effect_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stage.add_child(mine_effect_layer)
 	mine_status = make_label("", 24)
 	content.add_child(mine_status)
 	content.add_child(make_label("보석 ◆ %d개   |   %s" % [gems, last_mine_find], 21))
@@ -519,6 +554,8 @@ func refresh() -> void:
 	growth_buttons.clear()
 	mine_buttons.clear()
 	mine_status = null
+	mine_art = null
+	mine_effect_layer = null
 	if hero_idle_tween and hero_idle_tween.is_running():
 		hero_idle_tween.kill()
 	hero_sprite = null
