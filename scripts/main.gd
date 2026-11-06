@@ -147,18 +147,16 @@ func parse_save_json(raw: String) -> Variant:
 	return parser.data if parser.data is Dictionary else null
 
 func load_game() -> void:
-	if not FileAccess.file_exists(SAVE_PATH):
-		return
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
-	if file == null:
-		return
-	var data = parse_save_json(file.get_as_text())
+	var data: Variant = null
+	if FileAccess.file_exists(SAVE_PATH):
+		var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+		if file != null:
+			data = parse_save_json(file.get_as_text())
 	if not (data is Dictionary) and FileAccess.file_exists(SAVE_BACKUP_PATH):
 		data = parse_save_json(FileAccess.get_file_as_string(SAVE_BACKUP_PATH))
 		if data is Dictionary:
 			offline_report = "저장 파일 손상 감지 · 이전 백업 복원"
-			# Repair the primary file immediately so another restart can recover too.
-			DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_BACKUP_PATH), ProjectSettings.globalize_path(SAVE_PATH))
+			restore_save_from_backup()
 	if data is Dictionary:
 		money = maxf(0.0, float(data.get("money", 0.0)))
 		run_earned = maxf(money, float(data.get("run_earned", money)))
@@ -199,6 +197,14 @@ func load_game() -> void:
 				money += offline_gain
 				run_earned += offline_gain
 				offline_report = "부재중 수익 +%s원 (%d분)" % [number(offline_gain), int(elapsed / 60.0)]
+
+func restore_save_from_backup() -> bool:
+	if not FileAccess.file_exists(SAVE_BACKUP_PATH):
+		return false
+	var backup = parse_save_json(FileAccess.get_file_as_string(SAVE_BACKUP_PATH))
+	if not (backup is Dictionary):
+		return false
+	return DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_BACKUP_PATH), ProjectSettings.globalize_path(SAVE_PATH)) == OK
 
 func save_game() -> void:
 	# Keep the last valid save before overwriting the primary file.
