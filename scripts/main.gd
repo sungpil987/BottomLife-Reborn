@@ -213,6 +213,7 @@ func load_game() -> void:
 			if offline_gain > 0.0:
 				money += offline_gain
 				run_earned += offline_gain
+				lifetime_earned += offline_gain
 				offline_report = "부재중 수익 +%s원 (%d분)" % [number(offline_gain), int(elapsed / 60.0)]
 
 func restore_save_from_backup() -> bool:
