@@ -26,6 +26,22 @@ func _run() -> void:
 			return
 	game.call("change_tab", 0)
 	await process_frame
+	# A tab change must not copy the previous tab's scroll offset into the next tab.
+	game.set("tab_scroll_positions", [0, 35, 70, 0, 0])
+	game.call("change_tab", 1)
+	await process_frame
+	if int(game.get("detail_scroll_position")) != 35:
+		push_error("Smoke test: business tab scroll position lost")
+		quit(1)
+		return
+	game.call("change_tab", 2)
+	await process_frame
+	if int(game.get("detail_scroll_position")) != 70:
+		push_error("Smoke test: mine tab scroll position lost")
+		quit(1)
+		return
+	game.call("change_tab", 0)
+	await process_frame
 	var before: float = float(game.get("money"))
 	game.call("tap_money")
 	if float(game.get("money")) <= before:
