@@ -157,6 +157,8 @@ func load_game() -> void:
 		data = parse_save_json(FileAccess.get_file_as_string(SAVE_BACKUP_PATH))
 		if data is Dictionary:
 			offline_report = "저장 파일 손상 감지 · 이전 백업 복원"
+			# Repair the primary file immediately so another restart can recover too.
+			DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_BACKUP_PATH), ProjectSettings.globalize_path(SAVE_PATH))
 	if data is Dictionary:
 		money = maxf(0.0, float(data.get("money", 0.0)))
 		run_earned = maxf(money, float(data.get("run_earned", money)))
