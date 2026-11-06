@@ -122,7 +122,7 @@ jobs:
           unzip -t build/BottomLife-debug.apk | tail -2
           "$ANDROID_HOME/build-tools/34.0.0/aapt" dump badging build/BottomLife-debug.apk | tee apk-badging.log
           grep -q "package: name='com.bottomlife.reborn'" apk-badging.log
-          grep -q "versionName='1.0.0-rc1'" apk-badging.log
+          grep -q "versionName='1.0.0'" apk-badging.log
           test "$(stat -c%s build/BottomLife-debug.apk)" -gt 1000000
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose build/BottomLife-debug.apk | tee apk-signature.log
           sha256sum build/BottomLife-debug.apk | tee apk-sha256.txt
