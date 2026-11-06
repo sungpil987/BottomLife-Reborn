@@ -61,10 +61,14 @@ jobs:
           cat "$HOME/.config/godot/editor_settings-4.tres"
       - name: Validate Godot project and scripts
         run: |
-          godot --headless --editor --path . --import
           set -o pipefail
+          godot --headless --editor --path . --import 2>&1 | tee godot-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|ERROR:.*(Parse|script)" godot-import.log; then
+            echo "Godot import validation failed"
+            exit 1
+          fi
           godot --headless --path . --quit-after 3 2>&1 | tee godot-validation.log
-          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script" godot-validation.log; then
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|ERROR:.*(Parse|script)" godot-validation.log; then
             echo "Godot script validation failed"
             exit 1
           fi
@@ -74,6 +78,15 @@ jobs:
           mkdir -p build
           godot --headless --verbose --path . --export-debug Android build/BottomLife-debug.apk
           test -s build/BottomLife-debug.apk
+      - name: Upload Godot diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: BottomLife-Diagnostics
+          path: |
+            godot-import.log
+            godot-validation.log
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: BottomLife-APK
