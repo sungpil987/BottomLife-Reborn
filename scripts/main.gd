@@ -52,6 +52,9 @@ var feedback: Label
 var save_clock: float = 0.0
 var ui_clock: float = 0.0
 var hero_sprite: TextureRect
+var hero_outfit: Control
+var hero_tier_label: Label
+var displayed_hero_tier: int = -1
 var hero_idle_tween: Tween
 var hero_blink_clock: float = 0.0
 var hero_blink_active: bool = false
@@ -87,6 +90,8 @@ func _process(delta: float) -> void:
 	save_clock += delta
 	ui_clock += delta
 	idle_time += delta
+	if is_instance_valid(hero_outfit):
+		update_hero_appearance()
 	if street_hit_clock > 0.0:
 		street_hit_clock = maxf(0.0, street_hit_clock - delta)
 		if street_hit_clock == 0.0 and is_instance_valid(hero_sprite):
@@ -897,6 +902,9 @@ func refresh() -> void:
 	if hero_idle_tween and hero_idle_tween.is_running():
 		hero_idle_tween.kill()
 	hero_sprite = null
+	hero_outfit = null
+	hero_tier_label = null
+	displayed_hero_tier = -1
 	tap_cost_label = null
 	auto_cost_label = null
 	street_stage = null
@@ -948,6 +956,36 @@ func build_placeholder(title: String, description: String) -> void:
 	content.add_child(make_label(title, 45))
 	content.add_child(make_label(description, 25))
 
+func hero_appearance_tier() -> int:
+	if run_earned >= 100000000.0:
+		return 3
+	if run_earned >= 1000000.0:
+		return 2
+	if run_earned >= 10000.0:
+		return 1
+	return 0
+
+func hero_appearance_name(tier: int) -> String:
+	match tier:
+		1:
+			return "동네의 생존자"
+		2:
+			return "거리의 사업가"
+		3:
+			return "밑바닥의 전설"
+	return "맨손의 거지"
+
+func update_hero_appearance() -> void:
+	var tier: int = hero_appearance_tier()
+	if tier == displayed_hero_tier:
+		return
+	displayed_hero_tier = tier
+	if is_instance_valid(hero_outfit):
+		hero_outfit.set("tier", tier)
+		hero_outfit.queue_redraw()
+	if is_instance_valid(hero_tier_label):
+		hero_tier_label.text = "%s  ·  다음 외형: %s" % [hero_appearance_name(tier), "최고 단계" if tier == 3 else number([10000.0, 1000000.0, 100000000.0][tier]) + "원 누적"]
+
 func build_street() -> void:
 	content.add_child(make_label("제1장  ·  비 내린 골목", 29))
 	if offline_report != "":
@@ -989,6 +1027,15 @@ func build_street() -> void:
 	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(hero)
 	hero_sprite = hero
+	var outfit := Control.new()
+	outfit.set_script(load("res://scripts/hero_outfit.gd"))
+	outfit.anchor_left = hero.anchor_left
+	outfit.anchor_right = hero.anchor_right
+	outfit.anchor_top = hero.anchor_top
+	outfit.anchor_bottom = hero.anchor_bottom
+	outfit.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scene_area.add_child(outfit)
+	hero_outfit = outfit
 	var foreground := Control.new()
 	foreground.set_script(load("res://scripts/street_foreground.gd"))
 	foreground.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1021,6 +1068,10 @@ func build_street() -> void:
 	feedback.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(feedback)
+	hero_tier_label = make_label("", 18)
+	hero_tier_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(hero_tier_label)
+	update_hero_appearance()
 	combo_label = make_label("연속 터치로 콤보를 쌓아보세요", 18)
 	combo_label.anchor_left = 0.05
 	combo_label.anchor_right = 0.95
@@ -1091,6 +1142,7 @@ func tap_money() -> void:
 		pop_tween.tween_property(hero_sprite, "rotation_degrees", 0.0, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		pop_tween.tween_property(hero_sprite, "modulate", Color.WHITE, 0.22)
 	refresh_header()
+	update_hero_appearance()
 	refresh_upgrade_buttons()
 
 func spawn_street_hit_sparks() -> void:
