@@ -136,29 +136,50 @@ func build_placeholder(title: String, description: String) -> void:
 	content.add_child(make_label(description, 25))
 
 func build_street() -> void:
-	content.add_child(make_label("Lv.1  거리의 거지", 34))
-	var scene_area := PanelContainer.new()
+	content.add_child(make_label("제1장 · 비 내린 골목", 29))
+	var scene_area := Control.new()
+	scene_area.custom_minimum_size.y = 380
 	scene_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scene_area.clip_contents = true
 	content.add_child(scene_area)
-	var stage := VBoxContainer.new()
-	stage.alignment = BoxContainer.ALIGNMENT_CENTER
-	scene_area.add_child(stage)
-	stage.add_child(make_label("어두운 골목", 32))
-	stage.add_child(make_label("   ▄██▄\n  ( •_• )\n  /|  |\\\n   /  \\", 43))
-	var tap := make_button("터치해서 돈 벌기")
-	tap.custom_minimum_size.y = 145
-	stage.add_child(tap)
-	feedback = make_label("터치하면 돈을 얻습니다", 25)
-	stage.add_child(feedback)
+	var backdrop := TextureRect.new()
+	backdrop.texture = load("res://assets/street.svg")
+	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scene_area.add_child(backdrop)
+	var hero := TextureRect.new()
+	hero.texture = load("res://assets/hero.svg")
+	hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	hero.anchor_left = 0.19
+	hero.anchor_right = 0.81
+	hero.anchor_top = 0.18
+	hero.anchor_bottom = 0.90
+	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scene_area.add_child(hero)
+	var tap := Button.new()
+	tap.flat = true
+	tap.text = ""
+	tap.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	tap.pressed.connect(tap_money)
-	content.add_child(make_label("능력 강화", 29))
+	scene_area.add_child(tap)
+	feedback = make_label("화면을 터치해 돈을 벌어보세요", 23)
+	feedback.anchor_left = 0.05
+	feedback.anchor_right = 0.95
+	feedback.anchor_top = 0.90
+	feedback.anchor_bottom = 1.0
+	feedback.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	scene_area.add_child(feedback)
+	content.add_child(make_label("능력 강화", 27))
 	var tap_cost := 100.0 * pow(1.35, tap_level - 1)
-	var tap_upgrade := make_button("터치 수익 Lv.%d   |   %s원" % [tap_level, number(tap_cost)])
+	var tap_upgrade := make_button("터치 수익 Lv.%d    |    %s원" % [tap_level, number(tap_cost)])
 	tap_upgrade.disabled = money < tap_cost
 	tap_upgrade.pressed.connect(buy_tap)
 	content.add_child(tap_upgrade)
 	var auto_cost := 250.0 * pow(1.42, auto_level)
-	var auto_upgrade := make_button("자동 수익 Lv.%d   |   %s원" % [auto_level, number(auto_cost)])
+	var auto_upgrade := make_button("자동 수익 Lv.%d    |    %s원" % [auto_level, number(auto_cost)])
 	auto_upgrade.disabled = money < auto_cost
 	auto_upgrade.pressed.connect(buy_auto)
 	content.add_child(auto_upgrade)
@@ -170,7 +191,7 @@ func tap_money() -> void:
 	# Preserve tap target while allowing upgrade buttons to update.
 	for child in content.get_children():
 		if child is Button:
-			child.disabled = false
+			child.disabled = money < (100.0 * pow(1.35, tap_level - 1) if child == content.get_child(content.get_child_count() - 2) else 250.0 * pow(1.42, auto_level))
 
 func buy_tap() -> void:
 	var cost := 100.0 * pow(1.35, tap_level - 1)
