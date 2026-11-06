@@ -310,7 +310,7 @@ func refresh_upgrade_buttons() -> void:
 		if is_instance_valid(business_buttons[i]):
 			var count := business_purchase_count(i)
 			business_buttons[i].disabled = count == 0
-			business_buttons[i].text = "확장 x%d\n%s원" % [count, number(business_purchase_cost(i, count))] if count > 0 else "구매 불가"
+			business_buttons[i].text = "확장 x%d\n%s원" % [count, number(business_purchase_cost(i, count))] if count > 0 else "부족 %s원" % number(maxf(0.0, business_cost(i) - money))
 	if is_instance_valid(tap_upgrade_button):
 		tap_upgrade_button.disabled = money < 100.0 * pow(1.35, tap_level - 1)
 	if is_instance_valid(auto_upgrade_button):
@@ -664,7 +664,7 @@ func build_business() -> void:
 		info.add_child(milestone_bar)
 		var count := business_purchase_count(i)
 		var cost := business_purchase_cost(i, count)
-		var button := make_button("확장 x%d\n%s원" % [count, number(cost)] if count > 0 else "구매 불가")
+		var button := make_button("확장 x%d\n%s원" % [count, number(cost)] if count > 0 else "부족 %s원" % number(maxf(0.0, business_cost(i) - money)))
 		button.custom_minimum_size = Vector2(106, 66)
 		button.add_theme_font_size_override("font_size", 19)
 		button.disabled = count == 0
