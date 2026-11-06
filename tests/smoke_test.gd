@@ -102,6 +102,17 @@ func _run() -> void:
 		return
 	# Exercise real gameplay systems after save/load. The CI runner has isolated user data.
 	game.set("money", 100000000.0)
+	var ore_before_invalid: int = int(game.get("rare_ore"))
+	game.call("craft_equipment", -1)
+	game.call("craft_equipment", 3)
+	if int(game.get("rare_ore")) != ore_before_invalid:
+		push_error("Smoke test: invalid equipment craft changed resources")
+		quit(1)
+		return
+	if not str(game.call("mine_depth_button_text")).contains("광석"):
+		push_error("Smoke test: mine depth button lacks ore guidance")
+		quit(1)
+		return
 	game.call("set_business_buy_mode", 1)
 	game.call("set_business_buy_mode", 7)
 	if int(game.get("business_buy_mode")) != 1:
