@@ -23,6 +23,8 @@ var mine_buttons: Array[Button] = []
 var mine_status: Label
 var mine_energy_bar: ProgressBar
 var rare_ore: int = 0
+var drill_level: int = 0
+var refinery_level: int = 0
 var mine_art: TextureRect
 var mine_effect_layer: Control
 var mine_flash_tween: Tween
@@ -118,6 +120,8 @@ func load_game() -> void:
 		pickaxe_level = maxi(1, int(data.get("pickaxe_level", 1)))
 		ore = maxi(0, int(data.get("ore", 0)))
 		rare_ore = maxi(0, int(data.get("rare_ore", 0)))
+		drill_level = clampi(int(data.get("drill_level", 0)), 0, 50)
+		refinery_level = clampi(int(data.get("refinery_level", 0)), 0, 50)
 		gems = maxi(0, int(data.get("gems", 0)))
 		luck_level = clampi(int(data.get("luck_level", 0)), 0, 50)
 		stamina_level = clampi(int(data.get("stamina_level", 0)), 0, 50)
@@ -134,7 +138,7 @@ func load_game() -> void:
 func save_game() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "saved_at": Time.get_unix_time_from_system()}))
+		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "saved_at": Time.get_unix_time_from_system()}))
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
@@ -281,6 +285,8 @@ func perform_rebirth() -> void:
 	pickaxe_level = 1
 	ore = 0
 	rare_ore = 0
+	drill_level = 0
+	refinery_level = 0
 	gems = 0
 	luck_level = 0
 	stamina_level = 0
@@ -490,15 +496,15 @@ func mine_dig() -> void:
 	if mine_energy < 1.0:
 		return
 	mine_energy -= 1.0
-	var reward := float(20 * pickaxe_level * mine_depth)
+	var reward := float(20 * (pickaxe_level + drill_level) * mine_depth)
 	reward *= prestige_multiplier() * mine_zone_bonus()
 	money += reward
 	run_earned += reward
-	ore += pickaxe_level
+	ore += pickaxe_level + drill_level
 	var rare_chance := minf(0.25, 0.01 + float(mine_depth) * 0.002)
 	var found_rare := randf() < rare_chance
 	if found_rare:
-		rare_ore += 1 + int(mine_depth / 25)
+		rare_ore += 1 + int(mine_depth / 25) + int(refinery_level / 5)
 	var chance := minf(0.60, 0.03 + float(luck_level) * 0.01 + float(mine_depth - 1) * 0.002)
 	if randf() < chance:
 		var found := 1 + int(mine_depth / 10)
@@ -541,10 +547,28 @@ func mine_upgrade_pickaxe() -> void:
 	save_game()
 	refresh()
 
+func craft_cost(kind: int) -> int:
+	var level := drill_level if kind == 0 else refinery_level
+	return 3 + level * 2 + int(level * level / 4)
+
+func craft_equipment(kind: int) -> void:
+	var level := drill_level if kind == 0 else refinery_level
+	var cost := craft_cost(kind)
+	if level >= 50 or rare_ore < cost:
+		return
+	rare_ore -= cost
+	if kind == 0:
+		drill_level += 1
+	else:
+		refinery_level += 1
+	last_mine_find = "장비 제작 성공!"
+	save_game()
+	refresh()
+
 func sell_rare_ore() -> void:
 	if rare_ore <= 0:
 		return
-	var income := float(rare_ore) * 2500.0 * float(mine_depth) * prestige_multiplier()
+	var income := float(rare_ore) * 2500.0 * float(mine_depth) * prestige_multiplier() * (1.0 + float(refinery_level) * 0.1)
 	money += income
 	run_earned += income
 	rare_ore = 0
@@ -623,11 +647,19 @@ func build_mine() -> void:
 	content.add_child(mine_energy_bar)
 	content.add_child(make_label("보석 ◆ %d개  |  희귀 광물 %d개" % [gems, rare_ore], 21))
 	content.add_child(make_label(last_mine_find, 19))
-	var sell := make_button("희귀 광물 판매  +%s원 / 개" % number(float(2500 * mine_depth) * prestige_multiplier()))
+	var sell := make_button("희귀 광물 판매  +%s원 / 개" % number(float(2500 * mine_depth) * prestige_multiplier() * (1.0 + float(refinery_level) * 0.1)))
 	sell.disabled = rare_ore == 0
 	sell.pressed.connect(sell_rare_ore)
 	content.add_child(sell)
-	var dig := make_button("곡괭이질  +%s원 / 광석 %d개" % [number(float(20 * pickaxe_level * mine_depth) * prestige_multiplier() * mine_zone_bonus()), pickaxe_level])
+	content.add_child(make_label("광산 장비 제작", 23))
+	for kind in range(2):
+		var level := drill_level if kind == 0 else refinery_level
+		var title := "강화 드릴 · 광석/채굴 수익 증가" if kind == 0 else "정제 설비 · 희귀 광물/판매 수익 증가"
+		var craft := make_button("%s  Lv.%d/50\n희귀 광물 %d개" % [title, level, craft_cost(kind)])
+		craft.disabled = level >= 50 or rare_ore < craft_cost(kind)
+		craft.pressed.connect(craft_equipment.bind(kind))
+		content.add_child(craft)
+	var dig := make_button("곡괭이질  +%s원 / 광석 %d개" % [number(float(20 * (pickaxe_level + drill_level) * mine_depth) * prestige_multiplier() * mine_zone_bonus()), pickaxe_level + drill_level])
 	dig.custom_minimum_size.y = 105
 	decorate_button(dig, true)
 	dig.disabled = mine_energy < 1.0
