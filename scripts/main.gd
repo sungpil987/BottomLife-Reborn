@@ -206,6 +206,79 @@ func change_tab(index: int) -> void:
 		decorate_button(tab_buttons[i], i == index)
 	refresh()
 
+func prestige_multiplier() -> float:
+	return 1.0 + float(soul_power) * 0.1
+
+func rebirth_reward() -> int:
+	if run_earned < 1000000.0:
+		return 0
+	return maxi(1, int(floor(sqrt(run_earned / 1000000.0))))
+
+func soul_upgrade_cost() -> int:
+	return 1 + int(soul_power / 5)
+
+func buy_soul_power() -> void:
+	var cost := soul_upgrade_cost()
+	if soul_points < cost or soul_power >= 1000:
+		return
+	soul_points -= cost
+	soul_power += 1
+	save_game()
+	refresh()
+
+func perform_rebirth() -> void:
+	var reward := rebirth_reward()
+	if reward == 0:
+		return
+	soul_points += reward
+	rebirth_count += 1
+	money = 0.0
+	run_earned = 0.0
+	tap_level = 1
+	auto_level = 0
+	business_levels = [0, 0, 0]
+	mine_depth = 1
+	pickaxe_level = 1
+	ore = 0
+	gems = 0
+	luck_level = 0
+	stamina_level = 0
+	mine_energy = MINE_MAX_ENERGY
+	last_mine_find = ""
+	save_game()
+	refresh()
+
+func request_rebirth() -> void:
+	if rebirth_reward() == 0:
+		return
+	var dialog := ConfirmationDialog.new()
+	dialog.title = "환생 확인"
+	dialog.dialog_text = "돈, 사업, 광산과 일반 성장이 초기화됩니다.\n영혼과 영구 강화는 유지됩니다.\n정말 환생하시겠습니까?"
+	dialog.confirmed.connect(perform_rebirth)
+	dialog.confirmed.connect(dialog.queue_free)
+	dialog.canceled.connect(dialog.queue_free)
+	add_child(dialog)
+	dialog.popup_centered()
+
+func build_rebirth() -> void:
+	content.add_child(make_label("환생의 제단", 34))
+	content.add_child(make_label("환생 %d회  |  영혼 %d개" % [rebirth_count, soul_points], 27))
+	content.add_child(make_label("영구 수익 배율  x%.1f" % prestige_multiplier(), 27))
+	content.add_child(make_label("이번 회차 누적 획득  %s원" % number(run_earned), 22))
+	content.add_child(make_label("환생 조건: 이번 회차 누적 100만원", 21))
+	var reward := rebirth_reward()
+	content.add_child(make_label("현재 환생 보상: 영혼 %d개" % reward, 24))
+	var upgrade := make_button("영혼의 힘 강화  수익 +10%%\n영혼 %d개" % soul_upgrade_cost())
+	upgrade.disabled = soul_points < soul_upgrade_cost() or soul_power >= 1000
+	upgrade.pressed.connect(buy_soul_power)
+	content.add_child(upgrade)
+	var button := make_button("환생하기  |  영혼 +%d" % reward)
+	decorate_button(button, true)
+	button.disabled = reward == 0
+	button.pressed.connect(request_rebirth)
+	content.add_child(button)
+	content.add_child(make_label("환생 시 일반 성장과 보유 자원은 초기화됩니다.", 20))
+
 func total_auto_income() -> float:
 	var result := float(auto_level) * 5.0
 	for i in range(3):
@@ -420,7 +493,7 @@ func refresh() -> void:
 		3:
 			build_growth()
 		4:
-			build_placeholder("메뉴", "게임은 10초마다 자동 저장됩니다.")
+			build_rebirth()
 
 func build_placeholder(title: String, description: String) -> void:
 	content.add_child(make_label(title, 45))
