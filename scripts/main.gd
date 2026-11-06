@@ -934,6 +934,7 @@ func refresh() -> void:
 	match current_tab:
 		0:
 			build_street()
+			wrap_content_scroll()
 		1:
 			build_business()
 		2:
@@ -1004,6 +1005,8 @@ func update_hero_appearance() -> void:
 	if is_instance_valid(hero_outfit):
 		hero_outfit.set("tier", tier)
 		hero_outfit.queue_redraw()
+	if is_instance_valid(street_event_label):
+		street_event_label.text = "거리 이벤트: %s  ·  %d/25 터치" % [street_event_title(), street_taps % 25]
 	if is_instance_valid(hero_tier_label):
 		hero_tier_label.text = "%s  ·  다음 외형: %s" % [hero_appearance_name(tier), "최고 단계" if tier == 3 else number([10000.0, 1000000.0, 100000000.0][tier]) + "원 누적"]
 
@@ -1013,7 +1016,7 @@ func build_street() -> void:
 		content.add_child(make_label(offline_report, 19))
 	var scene_area := Control.new()
 	scene_area.custom_minimum_size.y = 280
-	scene_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scene_area.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	scene_area.clip_contents = true
 	content.add_child(scene_area)
 	street_stage = scene_area
@@ -1121,10 +1124,10 @@ func build_street() -> void:
 	var tap_info := VBoxContainer.new()
 	tap_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tap_row.add_child(tap_info)
-	tap_info.add_child(make_label("터치 수익 · Lv.%d" % tap_level, 23))
+	tap_info.add_child(make_label("터치 수익 · Lv.%d" % tap_level, 20))
 	tap_info.add_child(make_label("%s원 → %s원 / 터치" % [number(tap_level * 10.0), number((tap_level + 1) * 10.0)], 18))
 	var tap_upgrade := make_button("강화\n%s원" % number(tap_cost))
-	tap_upgrade.custom_minimum_size = Vector2(190, 82)
+	tap_upgrade.custom_minimum_size = Vector2(126, 76)
 	tap_upgrade.disabled = money < tap_cost
 	tap_upgrade.pressed.connect(buy_tap)
 	tap_row.add_child(tap_upgrade)
@@ -1137,10 +1140,10 @@ func build_street() -> void:
 	var auto_info := VBoxContainer.new()
 	auto_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	auto_row.add_child(auto_info)
-	auto_info.add_child(make_label("자동 수익 · Lv.%d" % auto_level, 23))
+	auto_info.add_child(make_label("자동 수익 · Lv.%d" % auto_level, 20))
 	auto_info.add_child(make_label("%s원 → %s원 / 초" % [number(auto_level * 5.0), number((auto_level + 1) * 5.0)], 18))
 	var auto_upgrade := make_button("강화\n%s원" % number(auto_cost))
-	auto_upgrade.custom_minimum_size = Vector2(190, 82)
+	auto_upgrade.custom_minimum_size = Vector2(126, 76)
 	auto_upgrade.disabled = money < auto_cost
 	auto_upgrade.pressed.connect(buy_auto)
 	auto_row.add_child(auto_upgrade)
