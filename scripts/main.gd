@@ -91,6 +91,10 @@ func _ready() -> void:
 	build_ui()
 	refresh()
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST:
+		save_game()
+
 func _process(delta: float) -> void:
 	var gain := total_auto_income() * delta * prestige_multiplier()
 	money += gain
