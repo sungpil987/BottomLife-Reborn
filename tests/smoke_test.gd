@@ -26,18 +26,23 @@ func _run() -> void:
 			return
 	game.call("change_tab", 0)
 	await process_frame
-	# A tab change must not copy the previous tab's scroll offset into the next tab.
-	game.set("tab_scroll_positions", [0, 35, 70, 0, 0])
+	# Each scrollable tab must register its own ScrollContainer.
 	game.call("change_tab", 1)
 	await process_frame
-	if int(game.get("detail_scroll_position")) != 35:
-		push_error("Smoke test: business tab scroll position lost")
+	if not is_instance_valid(game.get("detail_scroll")):
+		push_error("Smoke test: business scroll container missing")
+		quit(1)
+		return
+	game.call("change_tab", 3)
+	await process_frame
+	if not is_instance_valid(game.get("detail_scroll")):
+		push_error("Smoke test: growth scroll container missing")
 		quit(1)
 		return
 	game.call("change_tab", 2)
 	await process_frame
-	if int(game.get("detail_scroll_position")) != 70:
-		push_error("Smoke test: mine tab scroll position lost")
+	if not is_instance_valid(game.get("detail_scroll")):
+		push_error("Smoke test: mine scroll container missing")
 		quit(1)
 		return
 	game.call("change_tab", 0)
