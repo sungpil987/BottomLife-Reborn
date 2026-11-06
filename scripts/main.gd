@@ -239,16 +239,16 @@ func build_ui() -> void:
 	var top_box := VBoxContainer.new()
 	top_box.add_theme_constant_override("separation", 4)
 	top.add_child(top_box)
-	header = make_label("", 32)
+	header = make_label("", 27)
 	top_box.add_child(header)
-	income_label = make_label("", 20)
+	income_label = make_label("", 18)
 	top_box.add_child(income_label)
 	content = VBoxContainer.new()
 	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 8)
 	outer.add_child(content)
 	var bottom := HBoxContainer.new()
-	bottom.custom_minimum_size.y = 88
+	bottom.custom_minimum_size.y = 76
 	bottom.add_theme_constant_override("separation", 4)
 	outer.add_child(bottom)
 	var tabs := ["거리", "사업", "광산", "성장", "메뉴"]
@@ -256,7 +256,7 @@ func build_ui() -> void:
 		var b := make_button(tabs[i])
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.add_theme_font_size_override("font_size", 18)
-		b.custom_minimum_size.y = 80
+		b.custom_minimum_size.y = 72
 		decorate_button(b, i == current_tab)
 		b.pressed.connect(change_tab.bind(i))
 		bottom.add_child(b)
@@ -419,7 +419,7 @@ func build_business() -> void:
 	art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.custom_minimum_size.y = 190
+	art.custom_minimum_size.y = 150
 	content.add_child(art)
 	business_income_label = make_label("사업 수익  +%s원/초" % number((total_auto_income() - float(auto_level) * 5.0) * prestige_multiplier()), 26)
 	content.add_child(business_income_label)
@@ -763,13 +763,14 @@ func refresh() -> void:
 			build_business()
 		2:
 			build_mine()
-			wrap_mine_scroll()
+			wrap_content_scroll()
 		3:
 			build_growth()
 		4:
 			build_rebirth()
+			wrap_content_scroll()
 
-func wrap_mine_scroll() -> void:
+func wrap_content_scroll() -> void:
 	# Keep the bottom navigation visible even on short Android screens.
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
