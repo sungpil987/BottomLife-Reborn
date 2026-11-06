@@ -18,6 +18,7 @@ var luck_level: int = 0
 var stamina_level: int = 0
 var last_mine_find: String = ""
 var mine_dig_counter: int = 0
+var mine_event_flash: bool = false
 var growth_buttons: Array[Button] = []
 var mine_energy: float = 10.0
 var mine_buttons: Array[Button] = []
@@ -607,6 +608,7 @@ func mine_dig() -> void:
 		return
 	mine_energy -= 1.0
 	mine_dig_counter += 1
+	mine_event_flash = false
 	var reward := float(20 * (pickaxe_level + drill_level) * mine_depth)
 	reward *= prestige_multiplier() * mine_zone_bonus() * soul_mining_multiplier()
 	money += reward
@@ -625,6 +627,7 @@ func mine_dig() -> void:
 		last_mine_find = "희귀 광물 발견!" if found_rare else "광석 %d개 획득" % maxi(1, int(ceil(float(pickaxe_level + drill_level) * soul_mining_multiplier())))
 	if mine_dig_counter % 15 == 0:
 		last_mine_find = trigger_mine_event()
+		mine_event_flash = true
 	save_game()
 	refresh()
 	play_mine_hit_effect()
@@ -634,22 +637,41 @@ func play_mine_hit_effect() -> void:
 		return
 	if mine_flash_tween and mine_flash_tween.is_running():
 		mine_flash_tween.kill()
-	mine_art.modulate = Color("#fff0b3")
+	var is_event: bool = mine_event_flash
+	var found_gem: bool = last_mine_find.begins_with("희귀 보석")
+	var effect_color: Color = Color("#ffcd73") if is_event else (Color("#8ef4ff") if found_gem else Color("#ffe0a0"))
+	mine_art.modulate = effect_color if is_event else Color("#fff0b3")
 	mine_flash_tween = create_tween()
-	mine_flash_tween.tween_property(mine_art, "modulate", Color.WHITE, 0.28)
-	var found_gem := last_mine_find.begins_with("희귀 보석")
-	var flash := make_label("◆ 보석 발견!" if found_gem else "쾅!  +광석", 31)
+	mine_flash_tween.tween_property(mine_art, "modulate", Color.WHITE, 0.48 if is_event else 0.28)
+	var flash: Label = make_label("특별 채굴 이벤트!" if is_event else ("보석 발견!" if found_gem else "쾅! +광석"), 26 if is_event else 30)
 	flash.z_index = 2
-	flash.add_theme_color_override("font_color", Color("#8ef4ff") if found_gem else Color("#ffe0a0"))
+	flash.add_theme_color_override("font_color", effect_color)
 	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	flash.position = Vector2(115, 82)
+	flash.position = Vector2(18, 70)
 	mine_effect_layer.add_child(flash)
-	var motion := create_tween()
+	var motion: Tween = create_tween()
 	motion.set_parallel(true)
-	motion.tween_property(flash, "position:y", 15.0, 0.8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	motion.tween_property(flash, "modulate:a", 0.0, 0.8)
+	motion.tween_property(flash, "position:y", 12.0, 1.25 if is_event else 0.8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	motion.tween_property(flash, "modulate:a", 0.0, 1.25 if is_event else 0.8)
 	motion.set_parallel(false)
 	motion.tween_callback(flash.queue_free)
+	if is_event:
+		for i in range(12):
+			var spark: ColorRect = ColorRect.new()
+			spark.color = effect_color
+			spark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			spark.size = Vector2(5.0 + float(i % 3) * 3.0, 5.0 + float(i % 3) * 3.0)
+			spark.position = Vector2(115.0, 95.0)
+			mine_effect_layer.add_child(spark)
+			var angle: float = TAU * float(i) / 12.0
+			var target: Vector2 = spark.position + Vector2(cos(angle), sin(angle)) * (45.0 + float(i % 4) * 14.0)
+			var burst: Tween = create_tween()
+			burst.set_parallel(true)
+			burst.tween_property(spark, "position", target, 0.75).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			burst.tween_property(spark, "modulate:a", 0.0, 0.75)
+			burst.set_parallel(false)
+			burst.tween_callback(spark.queue_free)
+	mine_event_flash = false
 
 func mine_upgrade_pickaxe() -> void:
 	var cost := mine_upgrade_cost()
