@@ -17,6 +17,12 @@ func _run() -> void:
 		push_error("Smoke test: HUD failed to initialize")
 		quit(1)
 		return
+	game.call("change_tab", -1)
+	game.call("change_tab", 5)
+	if int(game.get("current_tab")) != 0:
+		push_error("Smoke test: invalid tab index changed navigation")
+		quit(1)
+		return
 	for tab in range(5):
 		game.call("change_tab", tab)
 		await process_frame
