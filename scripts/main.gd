@@ -1257,6 +1257,8 @@ func tap_money() -> void:
 		combo_label.text = "COMBO %d  ·  터치 수익 x%.2f" % [tap_combo, combo_multiplier]
 	spawn_floating_money(earned)
 	spawn_street_hit_sparks()
+	if is_instance_valid(hero_outfit):
+		hero_outfit.call("celebrate")
 	if is_instance_valid(hero_sprite):
 		if pop_tween and pop_tween.is_running():
 			pop_tween.kill()
