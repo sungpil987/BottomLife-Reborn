@@ -15,6 +15,9 @@ var tap_upgrade_button: Button
 var auto_upgrade_button: Button
 var idle_time: float = 0.0
 var pop_tween: Tween
+var street_stage: Control
+var float_layer: Control
+var tab_buttons: Array[Button] = []
 
 func _ready() -> void:
 	load_game()
@@ -136,9 +139,12 @@ func build_ui() -> void:
 		decorate_button(b, i == current_tab)
 		b.pressed.connect(change_tab.bind(i))
 		bottom.add_child(b)
+		tab_buttons.append(b)
 
 func change_tab(index: int) -> void:
 	current_tab = index
+	for i in range(tab_buttons.size()):
+		decorate_button(tab_buttons[i], i == index)
 	refresh()
 
 func refresh_header() -> void:
@@ -158,6 +164,8 @@ func number(n: float) -> String:
 
 func refresh() -> void:
 	hero_sprite = null
+	street_stage = null
+	float_layer = null
 	tap_upgrade_button = null
 	auto_upgrade_button = null
 	refresh_header()
@@ -187,6 +195,7 @@ func build_street() -> void:
 	scene_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scene_area.clip_contents = true
 	content.add_child(scene_area)
+	street_stage = scene_area
 	var backdrop := TextureRect.new()
 	backdrop.texture = load("res://assets/street.svg")
 	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -194,6 +203,11 @@ func build_street() -> void:
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(backdrop)
+	var rain := Control.new()
+	rain.set_script(load("res://scripts/rain_overlay.gd"))
+	rain.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	rain.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scene_area.add_child(rain)
 	var hero := TextureRect.new()
 	hero.texture = load("res://assets/hero.svg")
 	hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -211,12 +225,17 @@ func build_street() -> void:
 	tap.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	tap.pressed.connect(tap_money)
 	scene_area.add_child(tap)
+	float_layer = Control.new()
+	float_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	float_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scene_area.add_child(float_layer)
 	feedback = make_label("화면을 터치해 돈을 벌어보세요", 23)
 	feedback.anchor_left = 0.05
 	feedback.anchor_right = 0.95
 	feedback.anchor_top = 0.90
 	feedback.anchor_bottom = 1.0
 	feedback.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(feedback)
 	content.add_child(make_label("능력 강화", 27))
 	var tap_cost := 100.0 * pow(1.35, tap_level - 1)
@@ -237,6 +256,7 @@ func build_street() -> void:
 func tap_money() -> void:
 	money += tap_level * 10.0
 	feedback.text = "+%s원!" % number(tap_level * 10.0)
+	spawn_floating_money()
 	if is_instance_valid(hero_sprite):
 		if pop_tween and pop_tween.is_running():
 			pop_tween.kill()
@@ -245,6 +265,21 @@ func tap_money() -> void:
 		pop_tween.tween_property(hero_sprite, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	refresh_header()
 	refresh_upgrade_buttons()
+
+func spawn_floating_money() -> void:
+	if not is_instance_valid(float_layer):
+		return
+	var label := make_label("+%s" % number(tap_level * 10.0), 34)
+	label.add_theme_color_override("font_color", Color("#ffd37b"))
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.position = Vector2(float_layer.size.x * randf_range(0.30, 0.65), float_layer.size.y * randf_range(0.35, 0.65))
+	float_layer.add_child(label)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label, "position:y", label.position.y - 115.0, 0.75).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "modulate:a", 0.0, 0.75)
+	tween.set_parallel(false)
+	tween.tween_callback(label.queue_free)
 
 func buy_tap() -> void:
 	var cost := 100.0 * pow(1.35, tap_level - 1)
