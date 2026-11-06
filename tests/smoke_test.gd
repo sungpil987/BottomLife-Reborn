@@ -180,6 +180,31 @@ func _run() -> void:
 		push_error("Smoke test: permanent wealth progress lost after restart")
 		quit(1)
 		return
+	# Offline earnings must increase cash, run earnings and lifetime earnings together.
+	game.set("auto_level", 10)
+	game.call("save_game")
+	var offline_data = JSON.parse_string(FileAccess.get_file_as_string("user://bottomlife_v1.json"))
+	if not (offline_data is Dictionary):
+		push_error("Offline regression: invalid saved JSON")
+		quit(1)
+		return
+	offline_data["saved_at"] = Time.get_unix_time_from_system() - 120.0
+	var cash_before_offline: float = float(offline_data["money"])
+	var lifetime_before_offline: float = float(offline_data["lifetime_earned"])
+	var offline_file := FileAccess.open("user://bottomlife_v1.json", FileAccess.WRITE)
+	offline_file.store_string(JSON.stringify(offline_data))
+	offline_file.close()
+	game.queue_free()
+	await process_frame
+	game = scene.instantiate()
+	root.add_child(game)
+	await process_frame
+	var offline_cash_gain: float = float(game.get("money")) - cash_before_offline
+	var offline_lifetime_gain: float = float(game.get("lifetime_earned")) - lifetime_before_offline
+	if offline_cash_gain < 2000.0 or absf(offline_cash_gain - offline_lifetime_gain) > 100.0:
+		push_error("Offline regression: lifetime earnings differ from offline cash")
+		quit(1)
+		return
 	# A corrupted primary save must recover from the previous valid backup.
 	game.call("save_game")
 	if not FileAccess.file_exists("user://bottomlife_v1.backup.json"):
