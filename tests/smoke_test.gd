@@ -45,8 +45,18 @@ func _run() -> void:
 		push_error("Smoke test: mine scroll container missing")
 		quit(1)
 		return
+	# Check that a real scroll offset is captured when leaving the tab.
+	var mine_scroll: ScrollContainer = game.get("detail_scroll")
+	mine_scroll.scroll_vertical = 24
+	await process_frame
+	var expected_offset: int = mine_scroll.scroll_vertical
 	game.call("change_tab", 0)
 	await process_frame
+	var remembered: int = int(game.get("tab_scroll_positions")[2])
+	if remembered != expected_offset:
+		push_error("Smoke test: mine scroll offset was not remembered")
+		quit(1)
+		return
 	var before: float = float(game.get("money"))
 	game.call("tap_money")
 	if float(game.get("money")) <= before:
