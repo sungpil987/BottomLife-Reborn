@@ -1170,7 +1170,7 @@ func tap_money() -> void:
 	tap_combo = mini(tap_combo + 1, 100)
 	street_taps += 1
 	tap_combo_clock = 0.0
-	var combo_multiplier: float = 1.0 + float(mini(tap_combo / 10, 10)) * 0.05
+	var combo_multiplier: float = 1.0 + float(mini(int(tap_combo / 10), 10)) * 0.05
 	var earned: float = float(tap_level) * 10.0 * prestige_multiplier() * combo_multiplier
 	money += earned
 	run_earned += earned
@@ -1211,7 +1211,7 @@ func play_street_event_fx(message: String) -> void:
 		street_event_popup.queue_free()
 	var popup := PanelContainer.new()
 	popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	popup.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	popup.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	popup.anchor_left = 0.08
 	popup.anchor_right = 0.92
 	popup.offset_left = 0.0
@@ -1226,7 +1226,7 @@ func play_street_event_fx(message: String) -> void:
 	street_event_popup = popup
 	popup.modulate.a = 0.0
 	popup.scale = Vector2(0.85, 0.85)
-	popup.pivot_offset = Vector2(popup.size.x * 0.5, popup.size.y * 0.5)
+	popup.pivot_offset = Vector2(0.0, 30.0)
 	street_event_popup_tween = create_tween()
 	street_event_popup_tween.tween_property(popup, "modulate:a", 1.0, 0.18)
 	street_event_popup_tween.parallel().tween_property(popup, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
