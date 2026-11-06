@@ -54,6 +54,7 @@ var ui_clock: float = 0.0
 var hero_sprite: TextureRect
 var hero_outfit: Control
 var hero_tier_label: Label
+var hero_tier_progress: ProgressBar
 var displayed_hero_tier: int = -1
 var hero_idle_tween: Tween
 var hero_blink_clock: float = 0.0
@@ -904,6 +905,7 @@ func refresh() -> void:
 	hero_sprite = null
 	hero_outfit = null
 	hero_tier_label = null
+	hero_tier_progress = null
 	displayed_hero_tier = -1
 	tap_cost_label = null
 	auto_cost_label = null
@@ -977,6 +979,9 @@ func hero_appearance_name(tier: int) -> String:
 
 func update_hero_appearance() -> void:
 	var tier: int = hero_appearance_tier()
+	if is_instance_valid(hero_tier_progress):
+		var thresholds: Array[float] = [10000.0, 1000000.0, 100000000.0]
+		hero_tier_progress.value = 100.0 if tier >= 3 else clampf(run_earned / thresholds[tier] * 100.0, 0.0, 100.0)
 	if tier == displayed_hero_tier:
 		return
 	displayed_hero_tier = tier
@@ -1029,12 +1034,9 @@ func build_street() -> void:
 	hero_sprite = hero
 	var outfit := Control.new()
 	outfit.set_script(load("res://scripts/hero_outfit.gd"))
-	outfit.anchor_left = hero.anchor_left
-	outfit.anchor_right = hero.anchor_right
-	outfit.anchor_top = hero.anchor_top
-	outfit.anchor_bottom = hero.anchor_bottom
+	outfit.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	outfit.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	scene_area.add_child(outfit)
+	hero.add_child(outfit)
 	hero_outfit = outfit
 	var foreground := Control.new()
 	foreground.set_script(load("res://scripts/street_foreground.gd"))
@@ -1071,6 +1073,11 @@ func build_street() -> void:
 	hero_tier_label = make_label("", 18)
 	hero_tier_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	content.add_child(hero_tier_label)
+	hero_tier_progress = ProgressBar.new()
+	hero_tier_progress.custom_minimum_size.y = 12
+	hero_tier_progress.show_percentage = false
+	hero_tier_progress.max_value = 100.0
+	content.add_child(hero_tier_progress)
 	update_hero_appearance()
 	combo_label = make_label("연속 터치로 콤보를 쌓아보세요", 18)
 	combo_label.anchor_left = 0.05
