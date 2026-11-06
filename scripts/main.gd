@@ -5,6 +5,13 @@ var money: float = 0.0
 var tap_level: int = 1
 var auto_level: int = 0
 var business_levels: Array[int] = [0, 0, 0]
+var mine_depth: int = 1
+var pickaxe_level: int = 1
+var ore: int = 0
+var mine_energy: float = 10.0
+var mine_buttons: Array[Button] = []
+var mine_status: Label
+const MINE_MAX_ENERGY := 10.0
 const BUSINESS_NAMES := ["길거리 노점", "분식 가게", "동네 편의점"]
 const BUSINESS_BASE_COST := [1000.0, 15000.0, 150000.0]
 const BUSINESS_BASE_INCOME := [12.0, 95.0, 780.0]
@@ -35,6 +42,9 @@ func _process(delta: float) -> void:
 	money += total_auto_income() * delta
 	save_clock += delta
 	idle_time += delta
+	mine_energy = minf(MINE_MAX_ENERGY, mine_energy + delta * 0.4)
+	if is_instance_valid(mine_status):
+		mine_status.text = "곡괭이 Lv.%d  |  기력 %d/10  |  광석 %d개" % [pickaxe_level, int(mine_energy), ore]
 	if save_clock >= 10.0:
 		save_clock = 0.0
 		save_game()
@@ -60,11 +70,14 @@ func load_game() -> void:
 		if saved_business is Array:
 			for i in range(mini(3, saved_business.size())):
 				business_levels[i] = clampi(int(saved_business[i]), 0, 100000)
+		mine_depth = maxi(1, int(data.get("mine_depth", 1)))
+		pickaxe_level = maxi(1, int(data.get("pickaxe_level", 1)))
+		ore = maxi(0, int(data.get("ore", 0)))
 
 func save_game() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels}))
+		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "pickaxe_level": pickaxe_level, "ore": ore}))
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
@@ -100,6 +113,13 @@ func decorate_button(button: Button, gold: bool = false) -> void:
 	button.add_theme_color_override("font_hover_color", Color("#16151b") if gold else Color("#ffffff"))
 
 func refresh_upgrade_buttons() -> void:
+	if mine_buttons.size() == 3:
+		if is_instance_valid(mine_buttons[0]):
+			mine_buttons[0].disabled = mine_energy < 1.0
+		if is_instance_valid(mine_buttons[1]):
+			mine_buttons[1].disabled = money < mine_upgrade_cost()
+		if is_instance_valid(mine_buttons[2]):
+			mine_buttons[2].disabled = ore < mine_depth_cost()
 	for i in range(business_buttons.size()):
 		if is_instance_valid(business_buttons[i]):
 			business_buttons[i].disabled = money < business_cost(i)
@@ -218,6 +238,69 @@ func build_business() -> void:
 		business_buttons.append(button)
 	content.add_child(make_label("사업은 구매 즉시 자동 수익이 발생합니다.", 19))
 
+func mine_upgrade_cost() -> float:
+	return 500.0 * pow(1.65, pickaxe_level - 1)
+
+func mine_depth_cost() -> int:
+	return 8 + mine_depth * 5
+
+func mine_dig() -> void:
+	if mine_energy < 1.0:
+		return
+	mine_energy -= 1.0
+	var reward := float(20 * pickaxe_level * mine_depth)
+	money += reward
+	ore += pickaxe_level
+	save_game()
+	refresh()
+
+func mine_upgrade_pickaxe() -> void:
+	var cost := mine_upgrade_cost()
+	if money < cost:
+		return
+	money -= cost
+	pickaxe_level += 1
+	save_game()
+	refresh()
+
+func mine_go_deeper() -> void:
+	var cost := mine_depth_cost()
+	if ore < cost:
+		return
+	ore -= cost
+	mine_depth += 1
+	save_game()
+	refresh()
+
+func build_mine() -> void:
+	content.add_child(make_label("폐광 탐험  ·  지하 %d층" % mine_depth, 31))
+	var art := TextureRect.new()
+	art.texture = load("res://assets/mine_cave.svg")
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.custom_minimum_size.y = 310
+	content.add_child(art)
+	mine_status = make_label("", 24)
+	content.add_child(mine_status)
+	var dig := make_button("곡괭이질  +%s원 / 광석 %d개" % [number(float(20 * pickaxe_level * mine_depth)), pickaxe_level])
+	dig.custom_minimum_size.y = 105
+	decorate_button(dig, true)
+	dig.disabled = mine_energy < 1.0
+	dig.pressed.connect(mine_dig)
+	content.add_child(dig)
+	mine_buttons.append(dig)
+	var pick := make_button("곡괭이 강화  Lv.%d → %d\n%s원" % [pickaxe_level, pickaxe_level + 1, number(mine_upgrade_cost())])
+	pick.disabled = money < mine_upgrade_cost()
+	pick.pressed.connect(mine_upgrade_pickaxe)
+	content.add_child(pick)
+	mine_buttons.append(pick)
+	var deeper := make_button("다음 층 내려가기\n광석 %d개 필요" % mine_depth_cost())
+	deeper.disabled = ore < mine_depth_cost()
+	deeper.pressed.connect(mine_go_deeper)
+	content.add_child(deeper)
+	mine_buttons.append(deeper)
+	content.add_child(make_label("기력은 2.5초마다 1씩 회복됩니다.", 19))
+
 func refresh_header() -> void:
 	if header == null:
 		return
@@ -235,6 +318,8 @@ func number(n: float) -> String:
 
 func refresh() -> void:
 	business_buttons.clear()
+	mine_buttons.clear()
+	mine_status = null
 	hero_sprite = null
 	tap_cost_label = null
 	auto_cost_label = null
@@ -252,7 +337,7 @@ func refresh() -> void:
 		1:
 			build_business()
 		2:
-			build_placeholder("광산", "광물 채굴은 다음 업데이트에서 열립니다.")
+			build_mine()
 		3:
 			build_placeholder("성장", "캐릭터 성장 콘텐츠 준비 중")
 		4:
