@@ -257,6 +257,32 @@ func decorate_button(button: Button, gold: bool = false) -> void:
 	button.add_theme_color_override("font_disabled_color", Color("#a29b95"))
 	button.add_theme_color_override("font_hover_color", Color("#16151b") if gold else Color("#ffffff"))
 
+func next_goal_text() -> String:
+	if current_tab == 0:
+		if run_earned < 10000.0:
+			return "다음 목표 · 누적 1만원으로 캐릭터 외형 변화"
+		if run_earned < 1000000.0:
+			return "다음 목표 · 누적 100만원으로 새로운 모습과 환생 해금"
+		if run_earned < 100000000.0:
+			return "다음 목표 · 누적 1억원으로 최고 외형 해금"
+		return "최고 외형 달성 · 사업과 광산을 성장시키세요"
+	if current_tab == 1:
+		for i in range(BUSINESS_NAMES.size()):
+			if business_levels[i] < 100:
+				var milestone: int = 25 if business_levels[i] < 25 else (50 if business_levels[i] < 50 else 100)
+				return "다음 목표 · %s Lv.%d (%d레벨 남음)" % [BUSINESS_NAMES[i], milestone, milestone - business_levels[i]]
+		return "모든 사업 성장 보너스 달성!"
+	if current_tab == 2:
+		return "다음 목표 · 지하 %d층 / 광석 %d개 필요" % [mine_depth + 1, mine_depth_cost()]
+	if current_tab == 3:
+		return "다음 목표 · 행운 Lv.%d / 체력 Lv.%d" % [mini(50, luck_level + 1), mini(50, stamina_level + 1)]
+	return "다음 목표 · 환생 보상 영혼 %d개" % rebirth_reward()
+
+func add_goal_hint() -> void:
+	var hint := make_label(next_goal_text(), 17)
+	hint.add_theme_color_override("font_color", Color("#d3b78b"))
+	content.add_child(hint)
+
 func refresh_upgrade_buttons() -> void:
 	for i in range(growth_buttons.size()):
 		if is_instance_valid(growth_buttons[i]):
@@ -450,6 +476,7 @@ func request_rebirth() -> void:
 
 func build_rebirth() -> void:
 	content.add_child(make_label("환생의 제단", 28))
+	add_goal_hint()
 	if offline_report != "":
 		content.add_child(make_label(offline_report, 20))
 	content.add_child(make_label("환생 %d회  |  영혼 %d개" % [rebirth_count, soul_points], 23))
@@ -564,6 +591,7 @@ func buy_business(index: int) -> void:
 
 func build_business() -> void:
 	content.add_child(make_label("나만의 사업 거리", 27))
+	add_goal_hint()
 	if business_purchase_notice != "":
 		var notice := make_label(business_purchase_notice, 20)
 		notice.add_theme_color_override("font_color", Color("#f7d38a"))
@@ -669,6 +697,7 @@ func buy_growth(index: int) -> void:
 
 func build_growth() -> void:
 	content.add_child(make_label("생존자의 성장", 28))
+	add_goal_hint()
 	content.add_child(make_label("보유 보석  ◆ %d개" % gems, 23))
 	content.add_child(make_label("광산 보석으로 능력 강화", 20))
 	var scroll := ScrollContainer.new()
@@ -902,6 +931,7 @@ func mine_go_deeper() -> void:
 
 func build_mine() -> void:
 	content.add_child(make_label("%s  ·  지하 %d층" % [mine_zone_name(), mine_depth], 27))
+	add_goal_hint()
 	content.add_child(make_label("지역 채굴 수익 x%.1f  |  5층마다 보석 보상" % mine_zone_bonus(), 19))
 	content.add_child(make_label("채굴 이벤트: %s · %d/15회" % [mine_event_name(), mine_dig_counter % 15], 18))
 	if next_mine_rebirth_requirement() > rebirth_count:
@@ -1127,6 +1157,7 @@ func update_hero_appearance() -> void:
 
 func build_street() -> void:
 	content.add_child(make_label("제1장  ·  비 내린 골목", 29))
+	add_goal_hint()
 	if offline_report != "":
 		content.add_child(make_label(offline_report, 19))
 	var scene_area := Control.new()
