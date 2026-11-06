@@ -122,10 +122,11 @@ func build_ui() -> void:
 	top.add_theme_stylebox_override("panel", panel_style(Color("#1e1b26"), Color("#ad8652"), 8))
 	outer.add_child(top)
 	var top_box := VBoxContainer.new()
+	top_box.add_theme_constant_override("separation", 4)
 	top.add_child(top_box)
-	header = make_label("", 34)
+	header = make_label("", 32)
 	top_box.add_child(header)
-	income_label = make_label("", 21)
+	income_label = make_label("", 20)
 	top_box.add_child(income_label)
 	content = VBoxContainer.new()
 	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -154,7 +155,7 @@ func change_tab(index: int) -> void:
 func refresh_header() -> void:
 	if header == null:
 		return
-	header.text = "밑바닥 인생   |   %s원" % number(money)
+	header.text = "밑바닥 인생     %s원" % number(money)
 	income_label.text = "터치 +%s원     자동 +%s원/초" % [number(tap_level * 10.0), number(auto_level * 5.0)]
 
 func number(n: float) -> String:
@@ -195,7 +196,7 @@ func build_placeholder(title: String, description: String) -> void:
 	content.add_child(make_label(description, 25))
 
 func build_street() -> void:
-	content.add_child(make_label("제1장 · 비 내린 골목", 29))
+	content.add_child(make_label("제1장  ·  비 내린 골목", 29))
 	var scene_area := Control.new()
 	scene_area.custom_minimum_size.y = 380
 	scene_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -221,13 +222,13 @@ func build_street() -> void:
 	scene_area.add_child(rain)
 	# Reliable texture fallback until procedural sprite is verified on Android.
 	var hero := TextureRect.new()
-	hero.texture = load("res://assets/hero.svg")
+	hero.texture = load("res://assets/hero_v2.svg")
 	hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	hero.anchor_left = 0.29
-	hero.anchor_right = 0.71
-	hero.anchor_top = 0.30
-	hero.anchor_bottom = 0.88
+	hero.anchor_left = 0.27
+	hero.anchor_right = 0.73
+	hero.anchor_top = 0.32
+	hero.anchor_bottom = 0.91
 	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(hero)
 	hero_sprite = hero
