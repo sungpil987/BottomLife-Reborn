@@ -7,7 +7,6 @@ var rebirth_count: int = 0
 var soul_points: int = 0
 var soul_power: int = 0
 var offline_report: String = ""
-var milestone_bonus: float = 1.0
 var tap_level: int = 1
 var auto_level: int = 0
 var business_levels: Array[int] = [0, 0, 0]
@@ -32,6 +31,8 @@ var income_label: Label
 var content: VBoxContainer
 var feedback: Label
 var save_clock: float = 0.0
+var ui_clock: float = 0.0
+var cached_money_text: String = ""
 var hero_sprite: TextureRect
 var tap_upgrade_button: Button
 var auto_upgrade_button: Button
@@ -54,6 +55,7 @@ func _process(delta: float) -> void:
 	money += gain
 	run_earned += gain
 	save_clock += delta
+	ui_clock += delta
 	idle_time += delta
 	mine_energy = minf(max_mine_energy(), mine_energy + delta * (0.4 + float(stamina_level) * 0.08))
 	if is_instance_valid(mine_status):
@@ -61,8 +63,10 @@ func _process(delta: float) -> void:
 	if save_clock >= 10.0:
 		save_clock = 0.0
 		save_game()
-	refresh_header()
-	refresh_upgrade_buttons()
+	if ui_clock >= 0.15:
+		ui_clock = 0.0
+		refresh_header()
+		refresh_upgrade_buttons()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
@@ -163,7 +167,7 @@ func refresh_upgrade_buttons() -> void:
 func make_button(value: String) -> Button:
 	var button := Button.new()
 	button.text = value
-	button.custom_minimum_size = Vector2(0, 85)
+	button.custom_minimum_size = Vector2(0, 72)
 	button.add_theme_font_size_override("font_size", 23)
 	decorate_button(button)
 	return button
@@ -182,7 +186,7 @@ func build_ui() -> void:
 	outer.add_theme_constant_override("separation", 8)
 	add_child(outer)
 	var top := PanelContainer.new()
-	top.custom_minimum_size.y = 120
+	top.custom_minimum_size.y = 104
 	top.add_theme_stylebox_override("panel", panel_style(Color("#1e1b26"), Color("#ad8652"), 8))
 	outer.add_child(top)
 	var top_box := VBoxContainer.new()
@@ -197,14 +201,15 @@ func build_ui() -> void:
 	content.add_theme_constant_override("separation", 8)
 	outer.add_child(content)
 	var bottom := HBoxContainer.new()
-	bottom.custom_minimum_size.y = 104
+	bottom.custom_minimum_size.y = 88
 	bottom.add_theme_constant_override("separation", 4)
 	outer.add_child(bottom)
 	var tabs := ["거리", "사업", "광산", "성장", "메뉴"]
 	for i in range(tabs.size()):
 		var b := make_button(tabs[i])
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.add_theme_font_size_override("font_size", 20)
+		b.add_theme_font_size_override("font_size", 18)
+		b.custom_minimum_size.y = 80
 		decorate_button(b, i == current_tab)
 		b.pressed.connect(change_tab.bind(i))
 		bottom.add_child(b)
@@ -277,7 +282,7 @@ func build_rebirth() -> void:
 	content.add_child(make_label("환생 %d회  |  영혼 %d개" % [rebirth_count, soul_points], 27))
 	content.add_child(make_label("영구 수익 배율  x%.1f" % prestige_multiplier(), 27))
 	content.add_child(make_label("이번 회차 누적 획득  %s원" % number(run_earned), 22))
-	content.add_child(make_label("환생 조건: 이번 회차 누적 100만원", 21))
+	content.add_child(make_label("환생 조건: 회차 누적 100만원", 20))
 	var reward := rebirth_reward()
 	content.add_child(make_label("현재 환생 보상: 영혼 %d개" % reward, 24))
 	var upgrade := make_button("영혼의 힘 강화  수익 +10%%\n영혼 %d개" % soul_upgrade_cost())
@@ -324,7 +329,7 @@ func build_business() -> void:
 	art.texture = load("res://assets/business_stall.svg")
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.custom_minimum_size.y = 240
+	art.custom_minimum_size.y = 190
 	content.add_child(art)
 	content.add_child(make_label("사업 수익  +%s원/초" % number(total_auto_income() - float(auto_level) * 5.0), 26))
 	var scroll := ScrollContainer.new()
@@ -380,7 +385,7 @@ func buy_growth(index: int) -> void:
 func build_growth() -> void:
 	content.add_child(make_label("생존자의 성장", 34))
 	content.add_child(make_label("보유 보석  ◆ %d개" % gems, 28))
-	content.add_child(make_label("광산에서 희귀 보석을 발견하고 능력을 강화하세요.", 22))
+	content.add_child(make_label("광산 보석으로 능력 강화", 20))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_child(scroll)
@@ -452,7 +457,7 @@ func build_mine() -> void:
 	art.texture = load("res://assets/mine_cave.svg")
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.custom_minimum_size.y = 310
+	art.custom_minimum_size.y = 230
 	content.add_child(art)
 	mine_status = make_label("", 24)
 	content.add_child(mine_status)
@@ -479,7 +484,9 @@ func build_mine() -> void:
 func refresh_header() -> void:
 	if header == null:
 		return
-	header.text = "밑바닥 인생     %s원" % number(money)
+	var next_text := "밑바닥 인생     %s원" % number(money)
+	if header.text != next_text:
+		header.text = next_text
 	income_label.text = "터치 +%s원     자동 +%s원/초" % [number(float(tap_level) * 10.0 * prestige_multiplier()), number(total_auto_income() * prestige_multiplier())]
 
 func number(n: float) -> String:
@@ -528,7 +535,7 @@ func build_street() -> void:
 	if offline_report != "":
 		content.add_child(make_label(offline_report, 19))
 	var scene_area := Control.new()
-	scene_area.custom_minimum_size.y = 380
+	scene_area.custom_minimum_size.y = 280
 	scene_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scene_area.clip_contents = true
 	content.add_child(scene_area)
