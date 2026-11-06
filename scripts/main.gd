@@ -234,6 +234,8 @@ func panel_style(bg: Color, outline: Color, radius: int = 16) -> StyleBoxFlat:
 	style.border_color = outline
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(radius)
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.30)
+	style.shadow_size = 3
 	style.content_margin_left = 12.0
 	style.content_margin_right = 12.0
 	style.content_margin_top = 12.0
@@ -248,6 +250,8 @@ func decorate_button(button: Button, gold: bool = false) -> void:
 	button.add_theme_stylebox_override("hover", hover)
 	button.add_theme_stylebox_override("pressed", pressed)
 	button.add_theme_stylebox_override("disabled", panel_style(Color("#25242b"), Color("#4c4441"), 2))
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.add_theme_color_override("font_pressed_color", Color("#fff2cf"))
 	button.add_theme_color_override("font_color", Color("#16151b") if gold else Color("#f8e6c9"))
 	button.add_theme_color_override("font_disabled_color", Color("#a29b95"))
 	button.add_theme_color_override("font_hover_color", Color("#16151b") if gold else Color("#ffffff"))
@@ -307,12 +311,17 @@ func build_ui() -> void:
 	outer.add_theme_constant_override("separation", 8)
 	add_child(outer)
 	var top := PanelContainer.new()
-	top.custom_minimum_size.y = 104
+	top.custom_minimum_size.y = 108
 	top.add_theme_stylebox_override("panel", panel_style(Color("#1e1b26"), Color("#ad8652"), 2))
 	outer.add_child(top)
 	var top_box := VBoxContainer.new()
 	top_box.add_theme_constant_override("separation", 4)
 	top.add_child(top_box)
+	var hud_frame := Control.new()
+	hud_frame.set_script(load("res://scripts/hud_ornament.gd"))
+	hud_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hud_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top.add_child(hud_frame)
 	header = make_label("", 27)
 	top_box.add_child(header)
 	income_label = make_label("", 18)
@@ -334,6 +343,10 @@ func build_ui() -> void:
 		decorate_button(b, i == current_tab)
 		b.pressed.connect(change_tab.bind(i))
 		bottom.add_child(b)
+		b.mouse_entered.connect(func() -> void:
+			if is_instance_valid(b):
+				b.pivot_offset = b.size * 0.5
+		)
 		tab_buttons.append(b)
 
 func change_tab(index: int) -> void:
