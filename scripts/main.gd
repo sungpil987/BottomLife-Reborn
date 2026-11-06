@@ -71,6 +71,8 @@ var street_hit_phase: int = 0
 var tap_combo: int = 0
 var street_taps: int = 0
 var street_event_label: Label
+var street_event_popup: PanelContainer
+var street_event_popup_tween: Tween
 var tap_combo_clock: float = 0.0
 var combo_label: Label
 var street_stage: Control
@@ -919,6 +921,10 @@ func refresh() -> void:
 	float_layer = null
 	combo_label = null
 	street_event_label = null
+	street_event_popup = null
+	if street_event_popup_tween and street_event_popup_tween.is_running():
+		street_event_popup_tween.kill()
+	street_event_popup_tween = null
 	tap_upgrade_button = null
 	auto_upgrade_button = null
 	refresh_header()
@@ -1171,6 +1177,7 @@ func tap_money() -> void:
 	feedback.text = "+%s원!" % number(earned)
 	if street_taps % 25 == 0:
 		feedback.text = trigger_street_event()
+		play_street_event_fx(feedback.text)
 	if is_instance_valid(street_event_label):
 		street_event_label.text = "거리 이벤트: %s  ·  %d/25 터치" % [street_event_title(), street_taps % 25]
 	if is_instance_valid(combo_label):
@@ -1194,6 +1201,51 @@ func tap_money() -> void:
 	refresh_header()
 	update_hero_appearance()
 	refresh_upgrade_buttons()
+
+func play_street_event_fx(message: String) -> void:
+	if not is_instance_valid(float_layer):
+		return
+	if street_event_popup_tween and street_event_popup_tween.is_running():
+		street_event_popup_tween.kill()
+	if is_instance_valid(street_event_popup):
+		street_event_popup.queue_free()
+	var popup := PanelContainer.new()
+	popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	popup.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	popup.anchor_left = 0.08
+	popup.anchor_right = 0.92
+	popup.offset_left = 0.0
+	popup.offset_right = 0.0
+	popup.offset_top = 48.0
+	popup.offset_bottom = 108.0
+	popup.add_theme_stylebox_override("panel", panel_style(Color("#312940"), Color("#f1c76c"), 12))
+	var text_label := make_label(message, 20)
+	text_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	popup.add_child(text_label)
+	float_layer.add_child(popup)
+	street_event_popup = popup
+	popup.modulate.a = 0.0
+	popup.scale = Vector2(0.85, 0.85)
+	popup.pivot_offset = Vector2(popup.size.x * 0.5, popup.size.y * 0.5)
+	street_event_popup_tween = create_tween()
+	street_event_popup_tween.tween_property(popup, "modulate:a", 1.0, 0.18)
+	street_event_popup_tween.parallel().tween_property(popup, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	street_event_popup_tween.tween_interval(1.3)
+	street_event_popup_tween.tween_property(popup, "modulate:a", 0.0, 0.35)
+	street_event_popup_tween.tween_callback(popup.queue_free)
+	for i in range(12):
+		var spark := ColorRect.new()
+		spark.color = Color("#ffe18a") if i % 2 == 0 else Color("#80e8ff")
+		spark.size = Vector2(7.0, 7.0)
+		spark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		spark.position = float_layer.size * Vector2(0.5, 0.45)
+		float_layer.add_child(spark)
+		var angle: float = TAU * float(i) / 12.0
+		var target: Vector2 = spark.position + Vector2(cos(angle), sin(angle)) * 100.0
+		var fx := create_tween().set_parallel(true)
+		fx.tween_property(spark, "position", target, 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		fx.tween_property(spark, "modulate:a", 0.0, 0.55)
+		fx.chain().tween_callback(spark.queue_free)
 
 func spawn_street_hit_sparks() -> void:
 	if not is_instance_valid(float_layer):
