@@ -68,7 +68,23 @@ func _run() -> void:
 		push_error("Smoke test: save file missing")
 		quit(1)
 		return
-	game.call("load_game")
+	# Verify persisted data through a fresh game instance, not just the same object.
+	var saved_money: float = float(game.get("money"))
+	var saved_taps: int = int(game.get("street_taps"))
+	var saved_json = JSON.parse_string(FileAccess.get_file_as_string("user://bottomlife_v1.json"))
+	if not (saved_json is Dictionary) or not saved_json.has("saved_at"):
+		push_error("Smoke test: save file JSON invalid")
+		quit(1)
+		return
+	game.queue_free()
+	await process_frame
+	game = scene.instantiate()
+	root.add_child(game)
+	await process_frame
+	if absf(float(game.get("money")) - saved_money) > 100.0 or int(game.get("street_taps")) != saved_taps:
+		push_error("Smoke test: saved progression did not survive scene restart")
+		quit(1)
+		return
 	# Exercise real gameplay systems after save/load. The CI runner has isolated user data.
 	game.set("money", 100000000.0)
 	game.call("set_business_buy_mode", 1)
