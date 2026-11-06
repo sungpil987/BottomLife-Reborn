@@ -20,6 +20,10 @@ var last_mine_find: String = ""
 var growth_buttons: Array[Button] = []
 var mine_energy: float = 10.0
 var mine_buttons: Array[Button] = []
+var mine_sell_button: Button
+var mine_craft_buttons: Array[Button] = []
+var mine_resource_label: Label
+var mine_result_label: Label
 var mine_status: Label
 var mine_energy_bar: ProgressBar
 var rare_ore: int = 0
@@ -177,6 +181,16 @@ func refresh_upgrade_buttons() -> void:
 	for i in range(growth_buttons.size()):
 		if is_instance_valid(growth_buttons[i]):
 			growth_buttons[i].disabled = gems < growth_cost(i) or (luck_level if i == 0 else stamina_level) >= 50
+	if is_instance_valid(mine_resource_label):
+		mine_resource_label.text = "보석 ◆ %d개  |  희귀 광물 %d개" % [gems, rare_ore]
+	if is_instance_valid(mine_result_label):
+		mine_result_label.text = last_mine_find
+	if is_instance_valid(mine_sell_button):
+		mine_sell_button.disabled = rare_ore <= 0
+	for kind in range(mine_craft_buttons.size()):
+		if is_instance_valid(mine_craft_buttons[kind]):
+			var level := drill_level if kind == 0 else refinery_level
+			mine_craft_buttons[kind].disabled = level >= 50 or rare_ore < craft_cost(kind)
 	if mine_buttons.size() == 3:
 		if is_instance_valid(mine_buttons[0]):
 			mine_buttons[0].disabled = mine_energy < 1.0
@@ -613,7 +627,7 @@ func build_mine() -> void:
 	content.add_child(make_label("%s  ·  지하 %d층" % [mine_zone_name(), mine_depth], 31))
 	content.add_child(make_label("지역 채굴 수익 x%.1f  |  5층마다 보석 보상" % mine_zone_bonus(), 19))
 	var stage := Control.new()
-	stage.custom_minimum_size.y = 230
+	stage.custom_minimum_size.y = 195
 	stage.clip_contents = true
 	content.add_child(stage)
 	var art := TextureRect.new()
@@ -645,20 +659,10 @@ func build_mine() -> void:
 	mine_energy_bar.add_theme_stylebox_override("background", panel_style(Color("#191923"), Color("#554b43"), 0))
 	mine_energy_bar.add_theme_stylebox_override("fill", panel_style(Color("#c79b51"), Color("#e6c479"), 0))
 	content.add_child(mine_energy_bar)
-	content.add_child(make_label("보석 ◆ %d개  |  희귀 광물 %d개" % [gems, rare_ore], 21))
-	content.add_child(make_label(last_mine_find, 19))
-	var sell := make_button("희귀 광물 판매  +%s원 / 개" % number(float(2500 * mine_depth) * prestige_multiplier() * (1.0 + float(refinery_level) * 0.1)))
-	sell.disabled = rare_ore == 0
-	sell.pressed.connect(sell_rare_ore)
-	content.add_child(sell)
-	content.add_child(make_label("광산 장비 제작", 23))
-	for kind in range(2):
-		var level := drill_level if kind == 0 else refinery_level
-		var title := "강화 드릴 · 광석/채굴 수익 증가" if kind == 0 else "정제 설비 · 희귀 광물/판매 수익 증가"
-		var craft := make_button("%s  Lv.%d/50\n희귀 광물 %d개" % [title, level, craft_cost(kind)])
-		craft.disabled = level >= 50 or rare_ore < craft_cost(kind)
-		craft.pressed.connect(craft_equipment.bind(kind))
-		content.add_child(craft)
+	mine_resource_label = make_label("보석 ◆ %d개  |  희귀 광물 %d개" % [gems, rare_ore], 21)
+	content.add_child(mine_resource_label)
+	mine_result_label = make_label(last_mine_find, 19)
+	content.add_child(mine_result_label)
 	var dig := make_button("곡괭이질  +%s원 / 광석 %d개" % [number(float(20 * (pickaxe_level + drill_level) * mine_depth) * prestige_multiplier() * mine_zone_bonus()), pickaxe_level + drill_level])
 	dig.custom_minimum_size.y = 105
 	decorate_button(dig, true)
@@ -676,7 +680,27 @@ func build_mine() -> void:
 	deeper.pressed.connect(mine_go_deeper)
 	content.add_child(deeper)
 	mine_buttons.append(deeper)
-	content.add_child(make_label("기력은 시간이 지나면 자동 회복됩니다.", 19))
+	content.add_child(make_label("장비 제작 · 희귀 광물", 22))
+	var equipment_row := HBoxContainer.new()
+	equipment_row.add_theme_constant_override("separation", 8)
+	content.add_child(equipment_row)
+	for kind in range(2):
+		var level := drill_level if kind == 0 else refinery_level
+		var title := "강화 드릴" if kind == 0 else "정제 설비"
+		var craft := make_button("%s Lv.%d\n광물 %d개" % [title, level, craft_cost(kind)])
+		craft.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		craft.add_theme_font_size_override("font_size", 19)
+		craft.disabled = level >= 50 or rare_ore < craft_cost(kind)
+		craft.pressed.connect(craft_equipment.bind(kind))
+		equipment_row.add_child(craft)
+		mine_craft_buttons.append(craft)
+	var sell := make_button("희귀 광물 모두 판매 · 개당 %s원" % number(float(2500 * mine_depth) * prestige_multiplier() * (1.0 + float(refinery_level) * 0.1)))
+	sell.custom_minimum_size.y = 64
+	sell.disabled = rare_ore <= 0
+	sell.pressed.connect(sell_rare_ore)
+	content.add_child(sell)
+	mine_sell_button = sell
+	content.add_child(make_label("기력은 시간이 지나면 자동 회복됩니다.", 18))
 
 func refresh_header() -> void:
 	if header == null:
@@ -699,6 +723,10 @@ func refresh() -> void:
 	business_buttons.clear()
 	growth_buttons.clear()
 	mine_buttons.clear()
+	mine_craft_buttons.clear()
+	mine_sell_button = null
+	mine_resource_label = null
+	mine_result_label = null
 	mine_status = null
 	mine_energy_bar = null
 	mine_art = null
