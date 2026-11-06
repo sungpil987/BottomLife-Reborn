@@ -111,8 +111,6 @@ func _process(delta: float) -> void:
 	save_clock += delta
 	ui_clock += delta
 	idle_time += delta
-	if is_instance_valid(hero_outfit):
-		update_hero_appearance()
 	if street_hit_clock > 0.0:
 		street_hit_clock = maxf(0.0, street_hit_clock - delta)
 		if street_hit_clock == 0.0 and is_instance_valid(hero_sprite):
@@ -144,6 +142,8 @@ func _process(delta: float) -> void:
 		save_game()
 	if ui_clock >= 0.15:
 		ui_clock = 0.0
+		if is_instance_valid(hero_outfit):
+			update_hero_appearance()
 		refresh_header()
 		refresh_upgrade_buttons()
 
