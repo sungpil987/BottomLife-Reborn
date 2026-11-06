@@ -138,10 +138,6 @@ func _process(delta: float) -> void:
 		refresh_header()
 		refresh_upgrade_buttons()
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
-		save_game()
-
 func parse_save_json(raw: String) -> Variant:
 	# JSON.parse() returns an error code without emitting an engine ERROR log.
 	# A corrupt primary save is expected during backup recovery.
