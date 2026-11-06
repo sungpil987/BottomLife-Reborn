@@ -325,7 +325,7 @@ func refresh_upgrade_buttons() -> void:
 		if is_instance_valid(business_buttons[i]):
 			var count := business_purchase_count(i)
 			business_buttons[i].disabled = count == 0
-			business_buttons[i].text = "확장 x%d\n%s원" % [count, number(business_purchase_cost(i, count))] if count > 0 else "부족 %s원" % number(maxf(0.0, business_cost(i) - money))
+			business_buttons[i].text = business_button_text(i, count)
 	if is_instance_valid(tap_upgrade_button):
 		tap_upgrade_button.disabled = money < 100.0 * pow(1.35, tap_level - 1)
 	if is_instance_valid(auto_upgrade_button):
@@ -605,6 +605,8 @@ func business_purchase_cost(index: int, count: int) -> float:
 	return first * (pow(growth, count) - 1.0) / (growth - 1.0)
 
 func business_purchase_count(index: int) -> int:
+	if index < 0 or index >= BUSINESS_NAMES.size() or business_levels[index] >= 100000:
+		return 0
 	var first := business_cost(index)
 	if money < first:
 		return 0
@@ -621,11 +623,22 @@ func business_purchase_count(index: int) -> int:
 			high = mid - 1
 	return low
 
+func business_button_text(index: int, count: int) -> String:
+	if business_levels[index] >= 100000:
+		return "최대 레벨"
+	if count > 0:
+		return "확장 x%d\n%s원" % [count, number(business_purchase_cost(index, count))]
+	return "부족 %s원" % number(maxf(0.0, business_cost(index) - money))
+
 func set_business_buy_mode(mode: int) -> void:
+	if mode not in [0, 1, 10]:
+		return
 	business_buy_mode = mode
 	refresh()
 
 func buy_business(index: int) -> void:
+	if index < 0 or index >= BUSINESS_NAMES.size():
+		return
 	var count := business_purchase_count(index)
 	if count <= 0:
 		return
@@ -722,7 +735,7 @@ func build_business() -> void:
 		info.add_child(milestone_bar)
 		var count := business_purchase_count(i)
 		var cost := business_purchase_cost(i, count)
-		var button := make_button("확장 x%d\n%s원" % [count, number(cost)] if count > 0 else "부족 %s원" % number(maxf(0.0, business_cost(i) - money)))
+		var button := make_button(business_button_text(i, count))
 		button.custom_minimum_size = Vector2(106, 66)
 		button.add_theme_font_size_override("font_size", 19)
 		button.disabled = count == 0
