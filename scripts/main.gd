@@ -730,7 +730,7 @@ func build_mine() -> void:
 	mineral_overlay.set_script(load("res://scripts/mine_zone_overlay.gd"))
 	mineral_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mineral_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	mineral_overlay.set("zone", 3 if mine_depth >= 50 else (2 if mine_depth >= 25 else (1 if mine_depth >= 10 else 0)))
+	mineral_overlay.set("zone", 5 if mine_depth >= 125 else (4 if mine_depth >= 75 else (3 if mine_depth >= 50 else (2 if mine_depth >= 25 else (1 if mine_depth >= 10 else 0)))))
 	stage.add_child(mineral_overlay)
 	mine_effect_layer = Control.new()
 	mine_effect_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
