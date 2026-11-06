@@ -6,6 +6,8 @@ var run_earned: float = 0.0
 var rebirth_count: int = 0
 var soul_points: int = 0
 var soul_power: int = 0
+var offline_report: String = ""
+var milestone_bonus: float = 1.0
 var tap_level: int = 1
 var auto_level: int = 0
 var business_levels: Array[int] = [0, 0, 0]
@@ -92,11 +94,19 @@ func load_game() -> void:
 		luck_level = clampi(int(data.get("luck_level", 0)), 0, 50)
 		stamina_level = clampi(int(data.get("stamina_level", 0)), 0, 50)
 		mine_energy = max_mine_energy()
+		var saved_at := float(data.get("saved_at", 0.0))
+		if saved_at > 0.0:
+			var elapsed := clampf(Time.get_unix_time_from_system() - saved_at, 0.0, 14400.0)
+			var offline_gain := total_auto_income() * prestige_multiplier() * elapsed * 0.5
+			if offline_gain > 0.0:
+				money += offline_gain
+				run_earned += offline_gain
+				offline_report = "부재중 수익 +%s원 (%d분)" % [number(offline_gain), int(elapsed / 60.0)]
 
 func save_game() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "pickaxe_level": pickaxe_level, "ore": ore, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power}))
+		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "pickaxe_level": pickaxe_level, "ore": ore, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "saved_at": Time.get_unix_time_from_system()}))
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
@@ -262,6 +272,8 @@ func request_rebirth() -> void:
 
 func build_rebirth() -> void:
 	content.add_child(make_label("환생의 제단", 34))
+	if offline_report != "":
+		content.add_child(make_label(offline_report, 20))
 	content.add_child(make_label("환생 %d회  |  영혼 %d개" % [rebirth_count, soul_points], 27))
 	content.add_child(make_label("영구 수익 배율  x%.1f" % prestige_multiplier(), 27))
 	content.add_child(make_label("이번 회차 누적 획득  %s원" % number(run_earned), 22))
@@ -282,8 +294,17 @@ func build_rebirth() -> void:
 func total_auto_income() -> float:
 	var result := float(auto_level) * 5.0
 	for i in range(3):
-		result += float(business_levels[i]) * BUSINESS_BASE_INCOME[i]
+		result += float(business_levels[i]) * BUSINESS_BASE_INCOME[i] * business_milestone_multiplier(business_levels[i])
 	return result
+
+func business_milestone_multiplier(level: int) -> float:
+	if level >= 100:
+		return 8.0
+	if level >= 50:
+		return 4.0
+	if level >= 25:
+		return 2.0
+	return 1.0
 
 func business_cost(index: int) -> float:
 	return BUSINESS_BASE_COST[index] * pow(1.24, business_levels[index])
@@ -323,7 +344,8 @@ func build_business() -> void:
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(info)
 		info.add_child(make_label("%s  Lv.%d" % [BUSINESS_NAMES[i], business_levels[i]], 23))
-		info.add_child(make_label("+%s원/초" % number(float(business_levels[i]) * BUSINESS_BASE_INCOME[i]), 19))
+		info.add_child(make_label("+%s원/초" % number(float(business_levels[i]) * BUSINESS_BASE_INCOME[i] * business_milestone_multiplier(business_levels[i])), 19))
+		info.add_child(make_label("달성 보너스 x%.0f (25/50/100레벨)" % business_milestone_multiplier(business_levels[i]), 16))
 		var cost := business_cost(i)
 		var button := make_button("확장\n%s원" % number(cost))
 		button.custom_minimum_size = Vector2(180, 88)
@@ -331,7 +353,7 @@ func build_business() -> void:
 		button.pressed.connect(buy_business.bind(i))
 		row.add_child(button)
 		business_buttons.append(button)
-	content.add_child(make_label("사업은 구매 즉시 자동 수익이 발생합니다.", 19))
+	content.add_child(make_label("25/50/100레벨 달성 시 사업 수익 2/4/8배!", 19))
 
 func max_mine_energy() -> float:
 	return MINE_MAX_ENERGY + float(stamina_level) * 2.0
@@ -503,6 +525,8 @@ func build_placeholder(title: String, description: String) -> void:
 
 func build_street() -> void:
 	content.add_child(make_label("제1장  ·  비 내린 골목", 29))
+	if offline_report != "":
+		content.add_child(make_label(offline_report, 19))
 	var scene_area := Control.new()
 	scene_area.custom_minimum_size.y = 380
 	scene_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
