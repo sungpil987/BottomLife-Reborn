@@ -211,7 +211,7 @@ func refresh_upgrade_buttons() -> void:
 		if is_instance_valid(mine_buttons[1]):
 			mine_buttons[1].disabled = money < mine_upgrade_cost()
 		if is_instance_valid(mine_buttons[2]):
-			mine_buttons[2].disabled = ore < mine_depth_cost()
+			mine_buttons[2].disabled = ore < mine_depth_cost() or next_mine_rebirth_requirement() > rebirth_count
 	if is_instance_valid(business_income_label):
 		business_income_label.text = "사업 수익  +%s원/초" % number((total_auto_income() - float(auto_level) * 5.0) * prestige_multiplier())
 	for i in range(business_buttons.size()):
@@ -395,6 +395,7 @@ func build_rebirth() -> void:
 	button.disabled = reward == 0
 	button.pressed.connect(request_rebirth)
 	content.add_child(button)
+	content.add_child(make_label("새로운 광산 지역 · 환생 3회에 지하도시 / 10회에 태고의 심층 해금", 19))
 	content.add_child(make_label("환생 업적 · 영구 보상", 25))
 	for i in range(LEGACY_MILESTONES.size()):
 		var milestone: int = LEGACY_MILESTONES[i]
@@ -655,6 +656,10 @@ func sell_rare_ore() -> void:
 	refresh()
 
 func mine_zone_name() -> String:
+	if mine_depth >= 125:
+		return "태고의 심층"
+	if mine_depth >= 75:
+		return "망각의 지하도시"
 	if mine_depth >= 50:
 		return "심연의 수정동굴"
 	if mine_depth >= 25:
@@ -664,6 +669,10 @@ func mine_zone_name() -> String:
 	return "버려진 폐광"
 
 func mine_zone_bonus() -> float:
+	if mine_depth >= 125:
+		return 12.0
+	if mine_depth >= 75:
+		return 7.0
 	if mine_depth >= 50:
 		return 4.0
 	if mine_depth >= 25:
@@ -672,7 +681,19 @@ func mine_zone_bonus() -> float:
 		return 1.5
 	return 1.0
 
+func next_mine_rebirth_requirement() -> int:
+	if mine_depth == 74:
+		return 3
+	if mine_depth == 124:
+		return 10
+	return 0
+
 func mine_go_deeper() -> void:
+	var required := next_mine_rebirth_requirement()
+	if required > rebirth_count:
+		last_mine_find = "새 지역 해금: 환생 %d회 필요" % required
+		refresh()
+		return
 	var cost := mine_depth_cost()
 	if ore < cost:
 		return
@@ -690,6 +711,8 @@ func mine_go_deeper() -> void:
 func build_mine() -> void:
 	content.add_child(make_label("%s  ·  지하 %d층" % [mine_zone_name(), mine_depth], 31))
 	content.add_child(make_label("지역 채굴 수익 x%.1f  |  5층마다 보석 보상" % mine_zone_bonus(), 19))
+	if next_mine_rebirth_requirement() > rebirth_count:
+		content.add_child(make_label("다음 지역 잠김 · 환생 %d회 필요" % next_mine_rebirth_requirement(), 20))
 	var stage := Control.new()
 	stage.custom_minimum_size.y = 195
 	stage.clip_contents = true
@@ -740,7 +763,7 @@ func build_mine() -> void:
 	content.add_child(pick)
 	mine_buttons.append(pick)
 	var deeper := make_button("다음 층 내려가기\n광석 %d개 필요" % mine_depth_cost())
-	deeper.disabled = ore < mine_depth_cost()
+	deeper.disabled = ore < mine_depth_cost() or next_mine_rebirth_requirement() > rebirth_count
 	deeper.pressed.connect(mine_go_deeper)
 	content.add_child(deeper)
 	mine_buttons.append(deeper)
