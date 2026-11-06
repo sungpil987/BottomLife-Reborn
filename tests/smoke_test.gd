@@ -176,8 +176,18 @@ func _run() -> void:
 		quit(1)
 		return
 	game.set("rare_ore", 2)
+	var expected_sale: float = float(game.call("mine_sale_total"))
+	var sale_cash_before: float = float(game.get("money"))
+	if expected_sale <= 0.0 or not str(game.call("mine_sale_button_text")).contains("2개 판매"):
+		push_error("Smoke test: rare ore sale preview invalid")
+		quit(1)
+		return
 	previous_wealth = float(game.get("lifetime_earned"))
 	game.call("sell_rare_ore")
+	if absf(float(game.get("money")) - sale_cash_before - expected_sale) > 100.0 or not str(game.call("mine_sale_button_text")).contains("희귀 광물 없음"):
+		push_error("Smoke test: sale preview differs from payout")
+		quit(1)
+		return
 	if float(game.get("lifetime_earned")) <= previous_wealth:
 		push_error("Rare ore wealth tracking failed")
 		quit(1)
