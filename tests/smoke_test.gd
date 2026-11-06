@@ -79,6 +79,11 @@ func _run() -> void:
 		quit(1)
 		return
 	game.call("save_game")
+	var first_save = JSON.parse_string(FileAccess.get_file_as_string("user://bottomlife_v1.json"))
+	if not (first_save is Dictionary) or not first_save.has("lifetime_earned"):
+		push_error("Smoke test: flushed save is unreadable or incomplete")
+		quit(1)
+		return
 	if not FileAccess.file_exists("user://bottomlife_v1.json"):
 		push_error("Smoke test: save file missing")
 		quit(1)
