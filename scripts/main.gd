@@ -56,6 +56,7 @@ var ui_clock: float = 0.0
 var hero_sprite: TextureRect
 var hero_outfit: Control
 var street_evolution: Control
+var street_pixel_details: Control
 var hero_tier_label: Label
 var hero_tier_progress: ProgressBar
 var displayed_hero_tier: int = -1
@@ -971,6 +972,7 @@ func refresh() -> void:
 	hero_sprite = null
 	hero_outfit = null
 	street_evolution = null
+	street_pixel_details = null
 	hero_tier_label = null
 	hero_tier_progress = null
 	displayed_hero_tier = -1
@@ -1061,6 +1063,9 @@ func update_hero_appearance() -> void:
 	if is_instance_valid(street_evolution):
 		street_evolution.set("tier", tier)
 		street_evolution.queue_redraw()
+	if is_instance_valid(street_pixel_details):
+		street_pixel_details.set("tier", tier)
+		street_pixel_details.queue_redraw()
 	if is_instance_valid(hero_outfit):
 		hero_outfit.set("tier", tier)
 		hero_outfit.queue_redraw()
@@ -1098,6 +1103,12 @@ func build_street() -> void:
 	atmosphere.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	atmosphere.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(atmosphere)
+	var details := Control.new()
+	details.set_script(load("res://scripts/street_pixel_details.gd"))
+	details.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	details.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scene_area.add_child(details)
+	street_pixel_details = details
 	var rain := Control.new()
 	rain.set_script(load("res://scripts/rain_overlay.gd"))
 	rain.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
