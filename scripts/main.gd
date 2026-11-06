@@ -22,6 +22,7 @@ var pop_tween: Tween
 var street_stage: Control
 var float_layer: Control
 var tab_buttons: Array[Button] = []
+var business_buttons: Array[Button] = []
 var tap_cost_label: Label
 var auto_cost_label: Label
 
@@ -99,6 +100,9 @@ func decorate_button(button: Button, gold: bool = false) -> void:
 	button.add_theme_color_override("font_hover_color", Color("#16151b") if gold else Color("#ffffff"))
 
 func refresh_upgrade_buttons() -> void:
+	for i in range(business_buttons.size()):
+		if is_instance_valid(business_buttons[i]):
+			business_buttons[i].disabled = money < business_cost(i)
 	if is_instance_valid(tap_upgrade_button):
 		tap_upgrade_button.disabled = money < 100.0 * pow(1.35, tap_level - 1)
 	if is_instance_valid(auto_upgrade_button):
@@ -211,6 +215,7 @@ func build_business() -> void:
 		button.disabled = money < cost
 		button.pressed.connect(buy_business.bind(i))
 		row.add_child(button)
+		business_buttons.append(button)
 	content.add_child(make_label("사업은 구매 즉시 자동 수익이 발생합니다.", 19))
 
 func refresh_header() -> void:
@@ -229,6 +234,7 @@ func number(n: float) -> String:
 	return str(int(n))
 
 func refresh() -> void:
+	business_buttons.clear()
 	hero_sprite = null
 	tap_cost_label = null
 	auto_cost_label = null
