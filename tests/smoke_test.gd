@@ -142,6 +142,16 @@ func _run() -> void:
 		quit(1)
 		return
 	game.call("change_tab", 2)
+	game.set("mine_energy", 0.0)
+	if not str(game.call("mine_status_text")).contains("후 +1"):
+		push_error("Smoke test: mine energy countdown missing")
+		quit(1)
+		return
+	game.set("mine_energy", game.call("max_mine_energy"))
+	if not str(game.call("mine_status_text")).contains("완충"):
+		push_error("Smoke test: full mine energy status missing")
+		quit(1)
+		return
 	game.set("mine_energy", 10.0)
 	var ore_before: int = int(game.get("ore"))
 	var lifetime_before_mining: float = float(game.get("lifetime_earned"))
