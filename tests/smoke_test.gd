@@ -32,6 +32,10 @@ func _run() -> void:
 			return
 	game.call("change_tab", 0)
 	await process_frame
+	if not str(game.call("number", 10000000000000000.0)).contains("경") or not str(game.call("number", 100000000000000000000.0)).contains("해"):
+		push_error("Smoke test: large Korean currency formatting failed")
+		quit(1)
+		return
 	# Each scrollable tab must register its own ScrollContainer.
 	game.call("change_tab", 1)
 	await process_frame
