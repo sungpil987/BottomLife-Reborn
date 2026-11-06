@@ -499,13 +499,13 @@ func buy_business(index: int) -> void:
 	refresh()
 
 func build_business() -> void:
-	content.add_child(make_label("나만의 사업 거리", 32))
+	content.add_child(make_label("나만의 사업 거리", 27))
 	var art := TextureRect.new()
 	art.texture = load("res://assets/business_stall.svg")
 	art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.custom_minimum_size.y = 150
+	art.custom_minimum_size.y = 118
 	content.add_child(art)
 	business_income_label = make_label("사업 수익  +%s원/초" % number((total_auto_income() - float(auto_level) * 5.0) * prestige_multiplier()), 26)
 	content.add_child(business_income_label)
@@ -535,14 +535,21 @@ func build_business() -> void:
 		var info := VBoxContainer.new()
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(info)
-		info.add_child(make_label("%s  Lv.%d" % [BUSINESS_NAMES[i], business_levels[i]], 23))
+		info.add_child(make_label("%s  Lv.%d" % [BUSINESS_NAMES[i], business_levels[i]], 20))
 		info.add_child(make_label("+%s원/초" % number(float(business_levels[i]) * BUSINESS_BASE_INCOME[i] * business_milestone_multiplier(business_levels[i]) * prestige_multiplier()), 19))
 		var next_goal := 25 if business_levels[i] < 25 else (50 if business_levels[i] < 50 else (100 if business_levels[i] < 100 else 0))
 		info.add_child(make_label("다음 보너스: Lv.%d (%d 남음)" % [next_goal, next_goal - business_levels[i]] if next_goal > 0 else "모든 단계 보너스 달성!", 16))
+		var milestone_bar := ProgressBar.new()
+		milestone_bar.custom_minimum_size.y = 10
+		milestone_bar.show_percentage = false
+		milestone_bar.max_value = 100.0
+		var previous_goal: int = 0 if business_levels[i] < 25 else (25 if business_levels[i] < 50 else 50)
+		milestone_bar.value = 100.0 if next_goal == 0 else clampf(float(business_levels[i] - previous_goal) / float(next_goal - previous_goal) * 100.0, 0.0, 100.0)
+		info.add_child(milestone_bar)
 		var count := business_purchase_count(i)
 		var cost := business_purchase_cost(i, count)
 		var button := make_button("확장 x%d\n%s원" % [count, number(cost)] if count > 0 else "구매 불가")
-		button.custom_minimum_size = Vector2(180, 88)
+		button.custom_minimum_size = Vector2(122, 78)
 		button.disabled = count == 0
 		button.pressed.connect(buy_business.bind(i))
 		row.add_child(button)
@@ -572,8 +579,8 @@ func buy_growth(index: int) -> void:
 	refresh()
 
 func build_growth() -> void:
-	content.add_child(make_label("생존자의 성장", 34))
-	content.add_child(make_label("보유 보석  ◆ %d개" % gems, 28))
+	content.add_child(make_label("생존자의 성장", 28))
+	content.add_child(make_label("보유 보석  ◆ %d개" % gems, 23))
 	content.add_child(make_label("광산 보석으로 능력 강화", 20))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -588,7 +595,13 @@ func build_growth() -> void:
 		rows.add_child(panel)
 		var box := VBoxContainer.new()
 		panel.add_child(box)
-		box.add_child(make_label(("행운의 감각" if i == 0 else "강인한 체력") + "  Lv.%d/50" % level, 27))
+		box.add_child(make_label(("행운의 감각" if i == 0 else "강인한 체력") + "  Lv.%d/50" % level, 23))
+		var level_bar := ProgressBar.new()
+		level_bar.custom_minimum_size.y = 12
+		level_bar.show_percentage = false
+		level_bar.max_value = 50.0
+		level_bar.value = float(level)
+		box.add_child(level_bar)
 		box.add_child(make_label("보석 발견 확률 +%d%%p" % (level * 1) if i == 0 else "최대 기력 +%d / 회복 속도 증가" % (level * 2), 20))
 		var button := make_button("보석 %d개로 강화" % growth_cost(i))
 		button.disabled = gems < growth_cost(i) or level >= 50
