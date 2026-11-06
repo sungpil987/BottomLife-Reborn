@@ -61,6 +61,9 @@ var tap_upgrade_button: Button
 var auto_upgrade_button: Button
 var idle_time: float = 0.0
 var pop_tween: Tween
+var tap_combo: int = 0
+var tap_combo_clock: float = 0.0
+var combo_label: Label
 var street_stage: Control
 var float_layer: Control
 var tab_buttons: Array[Button] = []
@@ -82,6 +85,12 @@ func _process(delta: float) -> void:
 	save_clock += delta
 	ui_clock += delta
 	idle_time += delta
+	if tap_combo > 0:
+		tap_combo_clock += delta
+		if tap_combo_clock >= 2.0:
+			tap_combo = 0
+			if is_instance_valid(combo_label):
+				combo_label.text = "연속 터치로 콤보를 쌓아보세요"
 	if is_instance_valid(hero_sprite):
 		hero_blink_clock += delta
 		if hero_blink_active and hero_blink_clock >= 0.14:
@@ -886,6 +895,7 @@ func refresh() -> void:
 	auto_cost_label = null
 	street_stage = null
 	float_layer = null
+	combo_label = null
 	tap_upgrade_button = null
 	auto_upgrade_button = null
 	refresh_header()
@@ -1003,6 +1013,13 @@ func build_street() -> void:
 	feedback.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(feedback)
+	combo_label = make_label("연속 터치로 콤보를 쌓아보세요", 18)
+	combo_label.anchor_left = 0.05
+	combo_label.anchor_right = 0.95
+	combo_label.anchor_top = 0.02
+	combo_label.anchor_bottom = 0.13
+	combo_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scene_area.add_child(combo_label)
 	content.add_child(make_label("생존 능력 강화", 25))
 	var separator := HSeparator.new()
 	content.add_child(separator)
@@ -1040,11 +1057,16 @@ func build_street() -> void:
 	decorate_button(auto_upgrade, true)
 
 func tap_money() -> void:
-	var earned := float(tap_level) * 10.0 * prestige_multiplier()
+	tap_combo = mini(tap_combo + 1, 100)
+	tap_combo_clock = 0.0
+	var combo_multiplier: float = 1.0 + float(mini(tap_combo / 10, 10)) * 0.05
+	var earned: float = float(tap_level) * 10.0 * prestige_multiplier() * combo_multiplier
 	money += earned
 	run_earned += earned
 	feedback.text = "+%s원!" % number(earned)
-	spawn_floating_money()
+	if is_instance_valid(combo_label):
+		combo_label.text = "COMBO %d  ·  터치 수익 x%.2f" % [tap_combo, combo_multiplier]
+	spawn_floating_money(earned)
 	if is_instance_valid(hero_sprite):
 		if pop_tween and pop_tween.is_running():
 			pop_tween.kill()
@@ -1057,10 +1079,10 @@ func tap_money() -> void:
 	refresh_header()
 	refresh_upgrade_buttons()
 
-func spawn_floating_money() -> void:
+func spawn_floating_money(earned: float) -> void:
 	if not is_instance_valid(float_layer):
 		return
-	var label := make_label("+%s" % number(float(tap_level) * 10.0 * prestige_multiplier()), 34)
+	var label := make_label("+%s" % number(earned), 34)
 	label.add_theme_color_override("font_color", Color("#ffd37b"))
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.position = Vector2(float_layer.size.x * randf_range(0.30, 0.65), float_layer.size.y * randf_range(0.35, 0.65))
