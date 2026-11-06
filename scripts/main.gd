@@ -36,7 +36,6 @@ var content: VBoxContainer
 var feedback: Label
 var save_clock: float = 0.0
 var ui_clock: float = 0.0
-var cached_money_text: String = ""
 var hero_sprite: TextureRect
 var hero_idle_tween: Tween
 var hero_blink_clock: float = 0.0
@@ -357,11 +356,12 @@ func build_business() -> void:
 	content.add_child(make_label("나만의 사업 거리", 32))
 	var art := TextureRect.new()
 	art.texture = load("res://assets/business_stall.svg")
+	art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	art.custom_minimum_size.y = 190
 	content.add_child(art)
-	content.add_child(make_label("사업 수익  +%s원/초" % number(total_auto_income() - float(auto_level) * 5.0), 26))
+	content.add_child(make_label("사업 수익  +%s원/초" % number((total_auto_income() - float(auto_level) * 5.0) * prestige_multiplier()), 26))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_child(scroll)
@@ -474,6 +474,7 @@ func play_mine_hit_effect() -> void:
 	mine_flash_tween.tween_property(mine_art, "modulate", Color.WHITE, 0.28)
 	var found_gem := last_mine_find.begins_with("희귀")
 	var flash := make_label("◆ 보석 발견!" if found_gem else "쾅!  +광석", 31)
+	flash.z_index = 2
 	flash.add_theme_color_override("font_color", Color("#8ef4ff") if found_gem else Color("#ffe0a0"))
 	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	flash.position = Vector2(115, 82)
@@ -533,7 +534,7 @@ func build_mine() -> void:
 	mine_energy_bar.add_theme_stylebox_override("fill", panel_style(Color("#c79b51"), Color("#e6c479"), 0))
 	content.add_child(mine_energy_bar)
 	content.add_child(make_label("보석 ◆ %d개   |   %s" % [gems, last_mine_find], 21))
-	var dig := make_button("곡괭이질  +%s원 / 광석 %d개" % [number(float(20 * pickaxe_level * mine_depth)), pickaxe_level])
+	var dig := make_button("곡괭이질  +%s원 / 광석 %d개" % [number(float(20 * pickaxe_level * mine_depth) * prestige_multiplier()), pickaxe_level])
 	dig.custom_minimum_size.y = 105
 	decorate_button(dig, true)
 	dig.disabled = mine_energy < 1.0
@@ -654,10 +655,10 @@ func build_street() -> void:
 	scene_area.add_child(foreground)
 	hero_blink_clock = 0.0
 	hero_blink_active = false
-	hero.pivot_offset = Vector2(120, 165)
+	hero.pivot_offset = Vector2(0, 0)
 	hero_idle_tween = create_tween().set_loops()
-	hero_idle_tween.tween_property(hero, "position:y", hero.position.y - 5.0, 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	hero_idle_tween.tween_property(hero, "position:y", hero.position.y, 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	hero_idle_tween.tween_property(hero, "modulate", Color("#d7d0e1"), 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	hero_idle_tween.tween_property(hero, "modulate", Color.WHITE, 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	var tap := Button.new()
 	tap.flat = true
@@ -678,6 +679,8 @@ func build_street() -> void:
 	feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(feedback)
 	content.add_child(make_label("생존 능력 강화", 25))
+	var separator := HSeparator.new()
+	content.add_child(separator)
 	var tap_cost := 100.0 * pow(1.35, tap_level - 1)
 	var tap_row := HBoxContainer.new()
 	tap_row.custom_minimum_size.y = 82
