@@ -340,7 +340,8 @@ func make_button(value: String) -> Button:
 	return button
 
 func compact_screen() -> bool:
-	return get_viewport_rect().size.y < 760.0
+	var viewport_size: Vector2 = get_viewport_rect().size
+	return viewport_size.y < 760.0 or viewport_size.x < 390.0
 
 func build_ui() -> void:
 	var compact: bool = compact_screen()
@@ -1075,12 +1076,16 @@ func build_mine() -> void:
 func refresh_header() -> void:
 	if header == null:
 		return
-	var next_text := "밑바닥 인생     %s원" % number(money)
+	var next_text := "밑바닥 인생  %s원" % number(money)
 	if header.text != next_text:
 		header.text = next_text
-	income_label.text = "터치 +%s원     자동 +%s원/초" % [number(float(tap_level) * 10.0 * prestige_multiplier()), number(total_auto_income() * prestige_multiplier())]
+	income_label.text = "터치 +%s  |  자동 +%s/초" % [number(float(tap_level) * 10.0 * prestige_multiplier()), number(total_auto_income() * prestige_multiplier())]
 
 func number(n: float) -> String:
+	if n >= 100000000000000000000.0:
+		return "%.2f해" % (n / 100000000000000000000.0)
+	if n >= 10000000000000000.0:
+		return "%.2f경" % (n / 10000000000000000.0)
 	if n >= 1000000000000.0:
 		return "%.2f조" % (n / 1000000000000.0)
 	if n >= 100000000.0:
