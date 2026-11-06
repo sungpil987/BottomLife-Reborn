@@ -135,7 +135,7 @@ func _process(delta: float) -> void:
 			hero_blink_clock = 0.0
 	mine_energy = minf(max_mine_energy(), mine_energy + delta * (0.4 + float(stamina_level) * 0.08))
 	if is_instance_valid(mine_status):
-		mine_status.text = "곡괭이 Lv.%d  |  기력 %d/%d  |  광석 %d개" % [pickaxe_level, int(mine_energy), int(max_mine_energy()), ore]
+		mine_status.text = mine_status_text()
 	if is_instance_valid(mine_energy_bar):
 		mine_energy_bar.max_value = max_mine_energy()
 		mine_energy_bar.value = mine_energy
@@ -1005,6 +1005,11 @@ func mine_go_deeper() -> void:
 	save_game()
 	refresh()
 
+func mine_status_text() -> String:
+	var energy_rate: float = 0.4 + float(stamina_level) * 0.08
+	var recovery: String = "완충" if mine_energy >= max_mine_energy() else ("%d초 후 +1" % maxi(1, int(ceil((1.0 - fmod(mine_energy, 1.0)) / energy_rate))))
+	return "곡괭이 Lv.%d  |  기력 %d/%d  |  광석 %d개  |  %s" % [pickaxe_level, int(mine_energy), int(max_mine_energy()), ore, recovery]
+
 func mine_depth_button_text() -> String:
 	var required: int = next_mine_rebirth_requirement()
 	if required > rebirth_count:
@@ -1045,7 +1050,7 @@ func build_mine() -> void:
 	mine_effect_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mine_effect_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stage.add_child(mine_effect_layer)
-	mine_status = make_label("", 21)
+	mine_status = make_label(mine_status_text(), 18 if compact_screen() else 21)
 	content.add_child(mine_status)
 	mine_energy_bar = ProgressBar.new()
 	mine_energy_bar.custom_minimum_size.y = 15
