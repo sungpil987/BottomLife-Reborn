@@ -923,6 +923,7 @@ func sell_rare_ore() -> void:
 	var income := float(rare_ore) * 2500.0 * float(mine_depth) * prestige_multiplier() * (1.0 + float(refinery_level) * 0.1)
 	money += income
 	run_earned += income
+	lifetime_earned += income
 	rare_ore = 0
 	last_mine_find = "희귀 광물 판매 +%s원" % number(income)
 	save_game()
@@ -1369,6 +1370,7 @@ func trigger_street_event() -> String:
 	var reward: float = float(tap_level) * 10.0 * prestige_multiplier() * float(30 + tier * 25)
 	money += reward
 	run_earned += reward
+	lifetime_earned += reward
 	if tier >= 2:
 		gems += tier - 1
 	return "%s! +%s원%s" % [street_event_title(), number(reward), " / 보석 +%d" % (tier - 1) if tier >= 2 else ""]
