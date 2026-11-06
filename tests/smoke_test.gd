@@ -272,6 +272,25 @@ func _run() -> void:
 		push_error("Offline regression: lifetime earnings differ from offline cash")
 		quit(1)
 		return
+	# A valid JSON object without gameplay fields must also trigger backup recovery.
+	game.call("save_game")
+	var incomplete_file := FileAccess.open("user://bottomlife_v1.json", FileAccess.WRITE)
+	incomplete_file.store_string('{"money": 123}')
+	incomplete_file.close()
+	game.queue_free()
+	await process_frame
+	game = scene.instantiate()
+	root.add_child(game)
+	await process_frame
+	if int(game.get("rebirth_count")) < rebirth_before + 1 or not FileAccess.file_exists("user://bottomlife_v1.json"):
+		push_error("Smoke test: incomplete JSON save backup recovery failed")
+		quit(1)
+		return
+	var restored_incomplete = JSON.parse_string(FileAccess.get_file_as_string("user://bottomlife_v1.json"))
+	if not (restored_incomplete is Dictionary) or not restored_incomplete.has("business_levels"):
+		push_error("Smoke test: incomplete JSON primary was not repaired")
+		quit(1)
+		return
 	# A corrupted primary save must recover from the previous valid backup.
 	game.call("save_game")
 	if not FileAccess.file_exists("user://bottomlife_v1.backup.json"):
