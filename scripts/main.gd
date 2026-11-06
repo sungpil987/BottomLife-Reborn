@@ -7,6 +7,7 @@ var run_earned: float = 0.0
 var rebirth_count: int = 0
 var soul_points: int = 0
 var soul_power: int = 0
+var legacy_capital: int = 0
 var offline_report: String = ""
 var tap_level: int = 1
 var auto_level: int = 0
@@ -166,6 +167,7 @@ func load_game() -> void:
 		rebirth_count = maxi(0, int(data.get("rebirth_count", 0)))
 		soul_points = maxi(0, int(data.get("soul_points", 0)))
 		soul_power = clampi(int(data.get("soul_power", 0)), 0, 1000)
+		legacy_capital = clampi(int(data.get("legacy_capital", 0)), 0, 100)
 		soul_mining = clampi(int(data.get("soul_mining", 0)), 0, 100)
 		var saved_legacy = data.get("claimed_legacy", [])
 		if saved_legacy is Array:
@@ -217,7 +219,7 @@ func save_game() -> void:
 			DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(SAVE_BACKUP_PATH))
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "street_taps": street_taps, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "mine_energy": mine_energy, "mine_dig_counter": mine_dig_counter, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
+		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "street_taps": street_taps, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "mine_energy": mine_energy, "mine_dig_counter": mine_dig_counter, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "legacy_capital": legacy_capital, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
@@ -433,14 +435,26 @@ func buy_soul_power() -> void:
 	save_game()
 	refresh()
 
+func legacy_capital_cost() -> int:
+	return 3 + legacy_capital * 2 + int(legacy_capital * legacy_capital / 10)
+
+func buy_legacy_capital() -> void:
+	var cost: int = legacy_capital_cost()
+	if legacy_capital >= 100 or soul_points < cost:
+		return
+	soul_points -= cost
+	legacy_capital += 1
+	save_game()
+	refresh()
+
 func perform_rebirth() -> void:
 	var reward := rebirth_reward()
 	if reward == 0:
 		return
 	soul_points += reward
 	rebirth_count += 1
-	money = 0.0
-	run_earned = 0.0
+	money = float(legacy_capital) * 1000.0
+	run_earned = money
 	tap_level = 1
 	street_taps = 0
 	auto_level = 0
@@ -467,7 +481,7 @@ func request_rebirth() -> void:
 		return
 	var dialog := ConfirmationDialog.new()
 	dialog.title = "환생 확인"
-	dialog.dialog_text = "돈, 사업, 광산과 일반 성장이 초기화됩니다.\n영혼과 영구 강화는 유지됩니다.\n정말 환생하시겠습니까?"
+	dialog.dialog_text = "돈, 사업, 광산과 일반 성장이 초기화됩니다.\n영혼과 영구 강화는 유지됩니다.\n창업 자금 강화로 시작 자금을 확보할 수 있습니다.\n정말 환생하시겠습니까?"
 	dialog.confirmed.connect(perform_rebirth)
 	dialog.confirmed.connect(dialog.queue_free)
 	dialog.canceled.connect(dialog.queue_free)
@@ -482,6 +496,7 @@ func build_rebirth() -> void:
 	content.add_child(make_label("환생 %d회  |  영혼 %d개" % [rebirth_count, soul_points], 23))
 	content.add_child(make_label("영구 수익 배율  x%.1f" % prestige_multiplier(), 22))
 	content.add_child(make_label("영구 채굴 배율  x%.2f" % soul_mining_multiplier(), 21))
+	content.add_child(make_label("환생 시작 자금  %s원" % number(float(legacy_capital) * 1000.0), 20))
 	content.add_child(make_label("이번 회차 누적 획득  %s원" % number(run_earned), 22))
 	var progress := ProgressBar.new()
 	progress.custom_minimum_size.y = 22
@@ -503,6 +518,10 @@ func build_rebirth() -> void:
 	mining_upgrade.disabled = soul_points < soul_mining_cost() or soul_mining >= 100
 	mining_upgrade.pressed.connect(buy_soul_mining)
 	content.add_child(mining_upgrade)
+	var capital_upgrade := make_button("영구 창업 자금 Lv.%d/100\n다음 환생부터 시작 자금 +1,000원 · 영혼 %d개" % [legacy_capital, legacy_capital_cost()])
+	capital_upgrade.disabled = legacy_capital >= 100 or soul_points < legacy_capital_cost()
+	capital_upgrade.pressed.connect(buy_legacy_capital)
+	content.add_child(capital_upgrade)
 	var button := make_button("환생하기  |  영혼 +%d" % reward)
 	decorate_button(button, true)
 	button.disabled = reward == 0
