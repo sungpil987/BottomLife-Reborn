@@ -4,6 +4,10 @@ const SAVE_PATH = "user://bottomlife_v1.json"
 var money: float = 0.0
 var tap_level: int = 1
 var auto_level: int = 0
+var business_levels: Array[int] = [0, 0, 0]
+const BUSINESS_NAMES := ["길거리 노점", "분식 가게", "동네 편의점"]
+const BUSINESS_BASE_COST := [1000.0, 15000.0, 150000.0]
+const BUSINESS_BASE_INCOME := [12.0, 95.0, 780.0]
 var current_tab: int = 0
 var header: Label
 var income_label: Label
@@ -27,7 +31,7 @@ func _ready() -> void:
 	refresh()
 
 func _process(delta: float) -> void:
-	money += float(auto_level) * 5.0 * delta
+	money += total_auto_income() * delta
 	save_clock += delta
 	idle_time += delta
 	if save_clock >= 10.0:
@@ -51,11 +55,15 @@ func load_game() -> void:
 		money = maxf(0.0, float(data.get("money", 0.0)))
 		tap_level = maxi(1, int(data.get("tap_level", 1)))
 		auto_level = maxi(0, int(data.get("auto_level", 0)))
+		var saved_business = data.get("business_levels", [0, 0, 0])
+		if saved_business is Array:
+			for i in range(mini(3, saved_business.size())):
+				business_levels[i] = clampi(int(saved_business[i]), 0, 100000)
 
 func save_game() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level}))
+		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels}))
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
@@ -152,11 +160,64 @@ func change_tab(index: int) -> void:
 		decorate_button(tab_buttons[i], i == index)
 	refresh()
 
+func total_auto_income() -> float:
+	var result := float(auto_level) * 5.0
+	for i in range(3):
+		result += float(business_levels[i]) * BUSINESS_BASE_INCOME[i]
+	return result
+
+func business_cost(index: int) -> float:
+	return BUSINESS_BASE_COST[index] * pow(1.24, business_levels[index])
+
+func buy_business(index: int) -> void:
+	var cost := business_cost(index)
+	if money < cost:
+		return
+	money -= cost
+	business_levels[index] += 1
+	save_game()
+	refresh()
+
+func build_business() -> void:
+	content.add_child(make_label("나만의 사업 거리", 32))
+	var art := TextureRect.new()
+	art.texture = load("res://assets/business_stall.svg")
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.custom_minimum_size.y = 240
+	content.add_child(art)
+	content.add_child(make_label("사업 수익  +%s원/초" % number(total_auto_income() - float(auto_level) * 5.0), 26))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(scroll)
+	var rows := VBoxContainer.new()
+	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rows.add_theme_constant_override("separation", 12)
+	scroll.add_child(rows)
+	for i in range(3):
+		var panel := PanelContainer.new()
+		panel.add_theme_stylebox_override("panel", panel_style(Color("#24212c"), Color("#826744"), 12))
+		rows.add_child(panel)
+		var row := HBoxContainer.new()
+		panel.add_child(row)
+		var info := VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info)
+		info.add_child(make_label("%s  Lv.%d" % [BUSINESS_NAMES[i], business_levels[i]], 23))
+		info.add_child(make_label("+%s원/초" % number(float(business_levels[i]) * BUSINESS_BASE_INCOME[i]), 19))
+		var cost := business_cost(i)
+		var button := make_button("확장\n%s원" % number(cost))
+		button.custom_minimum_size = Vector2(180, 88)
+		button.disabled = money < cost
+		button.pressed.connect(buy_business.bind(i))
+		row.add_child(button)
+	content.add_child(make_label("사업은 구매 즉시 자동 수익이 발생합니다.", 19))
+
 func refresh_header() -> void:
 	if header == null:
 		return
 	header.text = "밑바닥 인생     %s원" % number(money)
-	income_label.text = "터치 +%s원     자동 +%s원/초" % [number(tap_level * 10.0), number(auto_level * 5.0)]
+	income_label.text = "터치 +%s원     자동 +%s원/초" % [number(tap_level * 10.0), number(total_auto_income())]
 
 func number(n: float) -> String:
 	if n >= 1000000000000.0:
@@ -183,7 +244,7 @@ func refresh() -> void:
 		0:
 			build_street()
 		1:
-			build_placeholder("사업", "사업장 운영은 다음 업데이트에서 열립니다.")
+			build_business()
 		2:
 			build_placeholder("광산", "광물 채굴은 다음 업데이트에서 열립니다.")
 		3:
