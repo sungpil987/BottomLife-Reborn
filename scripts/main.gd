@@ -203,7 +203,7 @@ func build_street() -> void:
 	content.add_child(scene_area)
 	street_stage = scene_area
 	var backdrop := TextureRect.new()
-	backdrop.texture = load("res://assets/street.svg")
+	backdrop.texture = load("res://assets/street_pixel.svg")
 	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -231,14 +231,7 @@ func build_street() -> void:
 	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(hero)
 	hero_sprite = hero
-	# Foreground remains independent of hero and cannot hide it.
-	var foreground := TextureRect.new()
-	foreground.texture = load("res://assets/street_foreground.svg")
-	foreground.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	foreground.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	foreground.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	foreground.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	scene_area.add_child(foreground)
+
 	var tap := Button.new()
 	tap.flat = true
 	tap.text = ""
