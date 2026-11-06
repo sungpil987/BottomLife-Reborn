@@ -112,6 +112,19 @@ func _run() -> void:
 		push_error("Smoke test: mining did not count toward lifetime wealth")
 		quit(1)
 		return
+	var previous_wealth: float = float(game.get("lifetime_earned"))
+	game.call("trigger_street_event")
+	if float(game.get("lifetime_earned")) <= previous_wealth:
+		push_error("Street event wealth tracking failed")
+		quit(1)
+		return
+	game.set("rare_ore", 2)
+	previous_wealth = float(game.get("lifetime_earned"))
+	game.call("sell_rare_ore")
+	if float(game.get("lifetime_earned")) <= previous_wealth:
+		push_error("Rare ore wealth tracking failed")
+		quit(1)
+		return
 	game.set("run_earned", 1000000.0)
 	game.set("soul_points", 7)
 	game.set("soul_power", 3)
