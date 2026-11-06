@@ -28,6 +28,7 @@ var mine_resource_label: Label
 var mine_result_label: Label
 var detail_scroll: ScrollContainer
 var detail_scroll_position: int = 0
+var tab_scroll_positions: Array[int] = [0, 0, 0, 0, 0]
 var mine_status: Label
 var mine_energy_bar: ProgressBar
 var rare_ore: int = 0
@@ -173,10 +174,11 @@ func load_game() -> void:
 		gems = maxi(0, int(data.get("gems", 0)))
 		luck_level = clampi(int(data.get("luck_level", 0)), 0, 50)
 		stamina_level = clampi(int(data.get("stamina_level", 0)), 0, 50)
-		mine_energy = max_mine_energy()
+		mine_energy = clampf(float(data.get("mine_energy", max_mine_energy())), 0.0, max_mine_energy())
 		var saved_at := float(data.get("saved_at", 0.0))
 		if saved_at > 0.0:
 			var elapsed := clampf(Time.get_unix_time_from_system() - saved_at, 0.0, 14400.0)
+			mine_energy = minf(max_mine_energy(), mine_energy + elapsed * (0.4 + float(stamina_level) * 0.08))
 			var offline_gain := total_auto_income() * prestige_multiplier() * elapsed * 0.5
 			if offline_gain > 0.0:
 				money += offline_gain
@@ -186,7 +188,7 @@ func load_game() -> void:
 func save_game() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "street_taps": street_taps, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "mine_dig_counter": mine_dig_counter, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
+		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "street_taps": street_taps, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "mine_energy": mine_energy, "mine_dig_counter": mine_dig_counter, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
@@ -306,8 +308,12 @@ func build_ui() -> void:
 		tab_buttons.append(b)
 
 func change_tab(index: int) -> void:
-	detail_scroll_position = 0
+	if index == current_tab:
+		return
+	if is_instance_valid(detail_scroll):
+		tab_scroll_positions[current_tab] = detail_scroll.scroll_vertical
 	current_tab = index
+	detail_scroll_position = tab_scroll_positions[index]
 	for i in range(tab_buttons.size()):
 		decorate_button(tab_buttons[i], i == index)
 	refresh()
@@ -379,6 +385,8 @@ func perform_rebirth() -> void:
 	luck_level = 0
 	stamina_level = 0
 	mine_energy = MINE_MAX_ENERGY
+	tab_scroll_positions = [0, 0, 0, 0, 0]
+	detail_scroll_position = 0
 	last_mine_find = ""
 	save_game()
 	refresh()
@@ -908,6 +916,7 @@ func number(n: float) -> String:
 func refresh() -> void:
 	if is_instance_valid(detail_scroll):
 		detail_scroll_position = detail_scroll.scroll_vertical
+		tab_scroll_positions[current_tab] = detail_scroll_position
 	detail_scroll = null
 	business_buttons.clear()
 	business_income_label = null
