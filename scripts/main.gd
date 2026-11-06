@@ -57,6 +57,7 @@ var street_stage: Control
 var float_layer: Control
 var tab_buttons: Array[Button] = []
 var business_buttons: Array[Button] = []
+var business_income_label: Label
 var business_buy_mode: int = 1
 var tap_cost_label: Label
 var auto_cost_label: Label
@@ -198,10 +199,13 @@ func refresh_upgrade_buttons() -> void:
 			mine_buttons[1].disabled = money < mine_upgrade_cost()
 		if is_instance_valid(mine_buttons[2]):
 			mine_buttons[2].disabled = ore < mine_depth_cost()
+	if is_instance_valid(business_income_label):
+		business_income_label.text = "사업 수익  +%s원/초" % number((total_auto_income() - float(auto_level) * 5.0) * prestige_multiplier())
 	for i in range(business_buttons.size()):
 		if is_instance_valid(business_buttons[i]):
-			business_buttons[i].disabled = business_purchase_count(i) == 0
-			business_buttons[i].text = "확장 x%d\n%s원" % [business_purchase_count(i), number(business_purchase_cost(i, business_purchase_count(i)))] if business_purchase_count(i) > 0 else "구매 불가"
+			var count := business_purchase_count(i)
+			business_buttons[i].disabled = count == 0
+			business_buttons[i].text = "확장 x%d\n%s원" % [count, number(business_purchase_cost(i, count))] if count > 0 else "구매 불가"
 	if is_instance_valid(tap_upgrade_button):
 		tap_upgrade_button.disabled = money < 100.0 * pow(1.35, tap_level - 1)
 	if is_instance_valid(auto_upgrade_button):
@@ -376,15 +380,21 @@ func business_purchase_cost(index: int, count: int) -> float:
 	return first * (pow(growth, count) - 1.0) / (growth - 1.0)
 
 func business_purchase_count(index: int) -> int:
-	var count := 0
-	var budget := money
-	var cost := business_cost(index)
-	var limit := 1000 if business_buy_mode == 0 else business_buy_mode
-	while count < limit and budget >= cost and business_levels[index] + count < 100000:
-		budget -= cost
-		count += 1
-		cost *= 1.24
-	return count
+	var first := business_cost(index)
+	if money < first:
+		return 0
+	var limit := mini(100000 - business_levels[index], 1000 if business_buy_mode == 0 else business_buy_mode)
+	if limit <= 0:
+		return 0
+	var low := 0
+	var high := limit
+	while low < high:
+		var mid := int((low + high + 1) / 2)
+		if business_purchase_cost(index, mid) <= money:
+			low = mid
+		else:
+			high = mid - 1
+	return low
 
 func set_business_buy_mode(mode: int) -> void:
 	business_buy_mode = mode
@@ -395,7 +405,7 @@ func buy_business(index: int) -> void:
 	if count <= 0:
 		return
 	var cost := business_purchase_cost(index, count)
-	if money < cost:
+	if money + maxf(0.000001, money * 0.000000000001) < cost:
 		return
 	money -= cost
 	business_levels[index] += count
@@ -411,7 +421,8 @@ func build_business() -> void:
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	art.custom_minimum_size.y = 190
 	content.add_child(art)
-	content.add_child(make_label("사업 수익  +%s원/초" % number((total_auto_income() - float(auto_level) * 5.0) * prestige_multiplier()), 26))
+	business_income_label = make_label("사업 수익  +%s원/초" % number((total_auto_income() - float(auto_level) * 5.0) * prestige_multiplier()), 26)
+	content.add_child(business_income_label)
 	var mode_row := HBoxContainer.new()
 	mode_row.add_theme_constant_override("separation", 6)
 	content.add_child(mode_row)
@@ -721,6 +732,7 @@ func number(n: float) -> String:
 
 func refresh() -> void:
 	business_buttons.clear()
+	business_income_label = null
 	growth_buttons.clear()
 	mine_buttons.clear()
 	mine_craft_buttons.clear()
