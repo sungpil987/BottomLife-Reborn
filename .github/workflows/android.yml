@@ -72,6 +72,15 @@ jobs:
             echo "Godot script validation failed"
             exit 1
           fi
+      - name: Run gameplay smoke tests
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/smoke_test.gd 2>&1 | tee godot-smoke.log
+          grep -q "SMOKE TEST PASSED" godot-smoke.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|ERROR:" godot-smoke.log; then
+            echo "Gameplay smoke test logged errors"
+            exit 1
+          fi
       - name: Import and export APK
         run: |
           set -o pipefail
@@ -98,6 +107,7 @@ jobs:
           path: |
             godot-import.log
             godot-validation.log
+            godot-smoke.log
             godot-export.log
             apk-badging.log
             apk-signature.log
