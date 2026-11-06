@@ -103,6 +103,27 @@ func _run() -> void:
 	# Exercise real gameplay systems after save/load. The CI runner has isolated user data.
 	game.set("money", 100000000.0)
 	game.call("set_business_buy_mode", 1)
+	game.call("set_business_buy_mode", 7)
+	if int(game.get("business_buy_mode")) != 1:
+		push_error("Smoke test: invalid business buy mode was accepted")
+		quit(1)
+		return
+	var level_before_invalid: int = int(game.get("business_levels")[0])
+	game.call("buy_business", -1)
+	game.call("buy_business", 99)
+	if int(game.get("business_levels")[0]) != level_before_invalid:
+		push_error("Smoke test: invalid business index changed progress")
+		quit(1)
+		return
+	var original_levels: Array = game.get("business_levels").duplicate()
+	var capped_levels: Array = original_levels.duplicate()
+	capped_levels[0] = 100000
+	game.set("business_levels", capped_levels)
+	if int(game.call("business_purchase_count", 0)) != 0 or str(game.call("business_button_text", 0, 0)) != "최대 레벨":
+		push_error("Smoke test: capped business purchase feedback failed")
+		quit(1)
+		return
+	game.set("business_levels", original_levels)
 	var business_before: int = int(game.get("business_levels")[0])
 	game.call("buy_business", 0)
 	if int(game.get("business_levels")[0]) != business_before + 1:
