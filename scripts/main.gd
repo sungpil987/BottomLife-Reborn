@@ -30,6 +30,9 @@ var mine_status: Label
 var mine_energy_bar: ProgressBar
 var rare_ore: int = 0
 var soul_mining: int = 0
+var claimed_legacy: Array[int] = []
+const LEGACY_MILESTONES := [1, 3, 5, 10, 20]
+const LEGACY_REWARDS := [2, 5, 10, 25, 60]
 var drill_level: int = 0
 var refinery_level: int = 0
 var mine_art: TextureRect
@@ -119,6 +122,12 @@ func load_game() -> void:
 		soul_points = maxi(0, int(data.get("soul_points", 0)))
 		soul_power = clampi(int(data.get("soul_power", 0)), 0, 1000)
 		soul_mining = clampi(int(data.get("soul_mining", 0)), 0, 100)
+		var saved_legacy = data.get("claimed_legacy", [])
+		if saved_legacy is Array:
+			for milestone in saved_legacy:
+				var value := int(milestone)
+				if value in LEGACY_MILESTONES and not claimed_legacy.has(value):
+					claimed_legacy.append(value)
 		tap_level = maxi(1, int(data.get("tap_level", 1)))
 		auto_level = maxi(0, int(data.get("auto_level", 0)))
 		var saved_business = data.get("business_levels", [0, 0, 0])
@@ -147,7 +156,7 @@ func load_game() -> void:
 func save_game() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "soul_mining": soul_mining, "saved_at": Time.get_unix_time_from_system()}))
+		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
@@ -284,6 +293,15 @@ func rebirth_reward() -> int:
 func soul_upgrade_cost() -> int:
 	return 1 + int(soul_power / 5)
 
+func claim_legacy(milestone: int) -> void:
+	var index := LEGACY_MILESTONES.find(milestone)
+	if index < 0 or rebirth_count < milestone or claimed_legacy.has(milestone):
+		return
+	claimed_legacy.append(milestone)
+	soul_points += LEGACY_REWARDS[index]
+	save_game()
+	refresh()
+
 func soul_mining_cost() -> int:
 	return 2 + soul_mining * 2
 
@@ -377,6 +395,16 @@ func build_rebirth() -> void:
 	button.disabled = reward == 0
 	button.pressed.connect(request_rebirth)
 	content.add_child(button)
+	content.add_child(make_label("환생 업적 · 영구 보상", 25))
+	for i in range(LEGACY_MILESTONES.size()):
+		var milestone := LEGACY_MILESTONES[i]
+		var claimed := claimed_legacy.has(milestone)
+		var achieved := rebirth_count >= milestone
+		var status := "수령 완료" if claimed else ("보상 받기" if achieved else "잠김")
+		var legacy_button := make_button("환생 %d회 달성 · 영혼 +%d\n%s" % [milestone, LEGACY_REWARDS[i], status])
+		legacy_button.disabled = claimed or not achieved
+		legacy_button.pressed.connect(claim_legacy.bind(milestone))
+		content.add_child(legacy_button)
 	content.add_child(make_label("환생 시 일반 성장과 보유 자원은 초기화됩니다.", 20))
 
 func total_auto_income() -> float:
