@@ -132,16 +132,16 @@ func _process(delta: float) -> void:
 			hero_blink_active = true
 			hero_blink_clock = 0.0
 	mine_energy = minf(max_mine_energy(), mine_energy + delta * (0.4 + float(stamina_level) * 0.08))
-	if is_instance_valid(mine_status):
-		mine_status.text = mine_status_text()
-	if is_instance_valid(mine_energy_bar):
-		mine_energy_bar.max_value = max_mine_energy()
-		mine_energy_bar.value = mine_energy
 	if save_clock >= 10.0:
 		save_clock = 0.0
 		save_game()
 	if ui_clock >= 0.15:
 		ui_clock = 0.0
+		if is_instance_valid(mine_status):
+			mine_status.text = mine_status_text()
+		if is_instance_valid(mine_energy_bar):
+			mine_energy_bar.max_value = max_mine_energy()
+			mine_energy_bar.value = mine_energy
 		if is_instance_valid(hero_outfit):
 			update_hero_appearance()
 		refresh_header()
@@ -233,6 +233,8 @@ func save_game() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
 		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "street_taps": street_taps, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "mine_energy": mine_energy, "mine_dig_counter": mine_dig_counter, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "legacy_capital": legacy_capital, "lifetime_earned": lifetime_earned, "claimed_wealth": claimed_wealth, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
+		file.flush()
+		file.close()
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
