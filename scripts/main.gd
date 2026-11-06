@@ -2,6 +2,10 @@ extends Control
 
 const SAVE_PATH = "user://bottomlife_v1.json"
 var money: float = 0.0
+var run_earned: float = 0.0
+var rebirth_count: int = 0
+var soul_points: int = 0
+var soul_power: int = 0
 var tap_level: int = 1
 var auto_level: int = 0
 var business_levels: Array[int] = [0, 0, 0]
@@ -44,7 +48,9 @@ func _ready() -> void:
 	refresh()
 
 func _process(delta: float) -> void:
-	money += total_auto_income() * delta
+	var gain := total_auto_income() * delta * prestige_multiplier()
+	money += gain
+	run_earned += gain
 	save_clock += delta
 	idle_time += delta
 	mine_energy = minf(max_mine_energy(), mine_energy + delta * (0.4 + float(stamina_level) * 0.08))
@@ -69,6 +75,10 @@ func load_game() -> void:
 	var data = JSON.parse_string(file.get_as_text())
 	if data is Dictionary:
 		money = maxf(0.0, float(data.get("money", 0.0)))
+		run_earned = maxf(money, float(data.get("run_earned", money)))
+		rebirth_count = maxi(0, int(data.get("rebirth_count", 0)))
+		soul_points = maxi(0, int(data.get("soul_points", 0)))
+		soul_power = clampi(int(data.get("soul_power", 0)), 0, 1000)
 		tap_level = maxi(1, int(data.get("tap_level", 1)))
 		auto_level = maxi(0, int(data.get("auto_level", 0)))
 		var saved_business = data.get("business_levels", [0, 0, 0])
@@ -86,7 +96,7 @@ func load_game() -> void:
 func save_game() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "pickaxe_level": pickaxe_level, "ore": ore, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level}))
+		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "pickaxe_level": pickaxe_level, "ore": ore, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power}))
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
