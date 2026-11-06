@@ -137,6 +137,15 @@ func _run() -> void:
 		push_error("Smoke test: corrupted save backup recovery failed")
 		quit(1)
 		return
+	var repaired_save = JSON.new()
+	if repaired_save.parse(FileAccess.get_file_as_string("user://bottomlife_v1.json")) != OK:
+		push_error("Smoke test: recovered primary save was not repaired")
+		quit(1)
+		return
+	if not (repaired_save.data is Dictionary) or int(repaired_save.data.get("rebirth_count", -1)) < rebirth_before + 1:
+		push_error("Smoke test: repaired primary save lost rebirth progress")
+		quit(1)
+		return
 	print("SMOKE TEST PASSED: scene, tabs, tapping, business, mining, rebirth, save restart, backup recovery")
 	game.queue_free()
 	await process_frame
