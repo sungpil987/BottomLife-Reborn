@@ -209,6 +209,11 @@ func build_street() -> void:
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(backdrop)
+	var atmosphere := Control.new()
+	atmosphere.set_script(load("res://scripts/street_atmosphere.gd"))
+	atmosphere.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	atmosphere.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scene_area.add_child(atmosphere)
 	var rain := Control.new()
 	rain.set_script(load("res://scripts/rain_overlay.gd"))
 	rain.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
