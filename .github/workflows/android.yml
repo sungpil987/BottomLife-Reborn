@@ -62,12 +62,12 @@ jobs:
       - name: Validate Godot project and scripts
         run: |
           set -o pipefail
-          godot --headless --editor --path . --import 2>&1 | tee godot-import.log
+          timeout 180s godot --headless --editor --path . --import 2>&1 | tee godot-import.log
           if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|ERROR:.*(Parse|script)" godot-import.log; then
             echo "Godot import validation failed"
             exit 1
           fi
-          godot --headless --path . --quit-after 3 2>&1 | tee godot-validation.log
+          timeout 90s godot --headless --path . --quit-after 3 2>&1 | tee godot-validation.log
           if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|ERROR:.*(Parse|script)" godot-validation.log; then
             echo "Godot script validation failed"
             exit 1
@@ -75,7 +75,7 @@ jobs:
       - name: Run gameplay smoke tests
         run: |
           set -o pipefail
-          godot --headless --path . --script res://tests/smoke_test.gd 2>&1 | tee godot-smoke.log
+          timeout 120s godot --headless --path . --script res://tests/smoke_test.gd 2>&1 | tee godot-smoke.log
           grep -q "SMOKE TEST PASSED" godot-smoke.log
           if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|ERROR:" godot-smoke.log; then
             echo "Gameplay smoke test logged errors"
@@ -85,7 +85,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p build
-          godot --headless --verbose --path . --export-debug Android build/BottomLife-debug.apk 2>&1 | tee godot-export.log
+          timeout 240s godot --headless --verbose --path . --export-debug Android build/BottomLife-debug.apk 2>&1 | tee godot-export.log
           if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|ERROR:.*(export|script|parse)" godot-export.log; then
             echo "Godot export errors detected"
             exit 1
