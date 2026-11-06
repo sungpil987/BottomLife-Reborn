@@ -532,7 +532,11 @@ func build_business() -> void:
 		mode_row.add_child(mode_button)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	content.add_child(scroll)
+	detail_scroll = scroll
+	if detail_scroll_position > 0:
+		call_deferred("restore_detail_scroll", scroll, detail_scroll_position)
 	var rows := VBoxContainer.new()
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rows.add_theme_constant_override("separation", 12)
@@ -595,7 +599,11 @@ func build_growth() -> void:
 	content.add_child(make_label("광산 보석으로 능력 강화", 20))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	content.add_child(scroll)
+	detail_scroll = scroll
+	if detail_scroll_position > 0:
+		call_deferred("restore_detail_scroll", scroll, detail_scroll_position)
 	var rows := VBoxContainer.new()
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(rows)
