@@ -10,7 +10,7 @@ var income_label: Label
 var content: VBoxContainer
 var feedback: Label
 var save_clock: float = 0.0
-var hero_sprite: Control
+var hero_sprite: TextureRect
 var tap_upgrade_button: Button
 var auto_upgrade_button: Button
 var idle_time: float = 0.0
@@ -214,12 +214,15 @@ func build_street() -> void:
 	rain.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	rain.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(rain)
-	var hero := Control.new()
-	hero.set_script(load("res://scripts/pixel_hero.gd"))
-	hero.anchor_left = 0.27
-	hero.anchor_right = 0.73
-	hero.anchor_top = 0.29
-	hero.anchor_bottom = 0.91
+	# Reliable texture fallback until procedural sprite is verified on Android.
+	var hero := TextureRect.new()
+	hero.texture = load("res://assets/hero.svg")
+	hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	hero.anchor_left = 0.29
+	hero.anchor_right = 0.71
+	hero.anchor_top = 0.30
+	hero.anchor_bottom = 0.88
 	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(hero)
 	hero_sprite = hero
@@ -280,7 +283,11 @@ func tap_money() -> void:
 	feedback.text = "+%s원!" % number(tap_level * 10.0)
 	spawn_floating_money()
 	if is_instance_valid(hero_sprite):
-		hero_sprite.call("react")
+		if pop_tween and pop_tween.is_running():
+			pop_tween.kill()
+		hero_sprite.scale = Vector2(0.94, 0.94)
+		pop_tween = create_tween()
+		pop_tween.tween_property(hero_sprite, "scale", Vector2.ONE, 0.16)
 	refresh_header()
 	refresh_upgrade_buttons()
 
