@@ -59,6 +59,14 @@ jobs:
           keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android
           echo "Godot editor configuration:"
           cat "$HOME/.config/godot/editor_settings-4.tres"
+      - name: Validate Godot project and scripts
+        run: |
+          godot --headless --editor --path . --import
+          godot --headless --path . --quit-after 3 2>&1 | tee godot-validation.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script" godot-validation.log; then
+            echo "Godot script validation failed"
+            exit 1
+          fi
       - name: Import and export APK
         run: |
           godot --headless --editor --path . --import
