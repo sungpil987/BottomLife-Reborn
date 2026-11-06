@@ -34,6 +34,11 @@ var save_clock: float = 0.0
 var ui_clock: float = 0.0
 var cached_money_text: String = ""
 var hero_sprite: TextureRect
+var hero_idle_tween: Tween
+var hero_blink_clock: float = 0.0
+var hero_blink_active: bool = false
+var hero_base_texture: Texture2D = preload("res://assets/hero_pixel.svg")
+var hero_blink_texture: Texture2D = preload("res://assets/hero_pixel_blink.svg")
 var tap_upgrade_button: Button
 var auto_upgrade_button: Button
 var idle_time: float = 0.0
@@ -57,6 +62,16 @@ func _process(delta: float) -> void:
 	save_clock += delta
 	ui_clock += delta
 	idle_time += delta
+	if is_instance_valid(hero_sprite):
+		hero_blink_clock += delta
+		if hero_blink_active and hero_blink_clock >= 0.14:
+			hero_sprite.texture = hero_base_texture
+			hero_blink_active = false
+			hero_blink_clock = 0.0
+		elif not hero_blink_active and hero_blink_clock >= 3.2:
+			hero_sprite.texture = hero_blink_texture
+			hero_blink_active = true
+			hero_blink_clock = 0.0
 	mine_energy = minf(max_mine_energy(), mine_energy + delta * (0.4 + float(stamina_level) * 0.08))
 	if is_instance_valid(mine_status):
 		mine_status.text = "곡괭이 Lv.%d  |  기력 %d/%d  |  광석 %d개" % [pickaxe_level, int(mine_energy), int(max_mine_energy()), ore]
@@ -504,6 +519,8 @@ func refresh() -> void:
 	growth_buttons.clear()
 	mine_buttons.clear()
 	mine_status = null
+	if hero_idle_tween and hero_idle_tween.is_running():
+		hero_idle_tween.kill()
 	hero_sprite = null
 	tap_cost_label = null
 	auto_cost_label = null
@@ -561,7 +578,7 @@ func build_street() -> void:
 	scene_area.add_child(rain)
 	# Reliable texture fallback until procedural sprite is verified on Android.
 	var hero := TextureRect.new()
-	hero.texture = load("res://assets/hero_pixel.svg")
+	hero.texture = hero_base_texture
 	hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	hero.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -572,6 +589,12 @@ func build_street() -> void:
 	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(hero)
 	hero_sprite = hero
+	hero_blink_clock = 0.0
+	hero_blink_active = false
+	hero.pivot_offset = Vector2(120, 180)
+	hero_idle_tween = create_tween().set_loops()
+	hero_idle_tween.tween_property(hero, "position:y", hero.position.y - 5.0, 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	hero_idle_tween.tween_property(hero, "position:y", hero.position.y, 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	var tap := Button.new()
 	tap.flat = true
@@ -634,9 +657,12 @@ func tap_money() -> void:
 	if is_instance_valid(hero_sprite):
 		if pop_tween and pop_tween.is_running():
 			pop_tween.kill()
-		hero_sprite.scale = Vector2(0.94, 0.94)
+		hero_sprite.scale = Vector2(0.91, 0.91)
+		hero_sprite.modulate = Color("#ffe2ad")
 		pop_tween = create_tween()
-		pop_tween.tween_property(hero_sprite, "scale", Vector2.ONE, 0.16)
+		pop_tween.set_parallel(true)
+		pop_tween.tween_property(hero_sprite, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		pop_tween.tween_property(hero_sprite, "modulate", Color.WHITE, 0.18)
 	refresh_header()
 	refresh_upgrade_buttons()
 
