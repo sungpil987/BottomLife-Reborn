@@ -46,6 +46,19 @@ jobs:
           export/android/debug_keystore_user = "androiddebugkey"
           export/android/debug_keystore_pass = "android"
           EOF
+      - name: Diagnose export environment
+        run: |
+          echo "Godot export templates:"
+          ls -lah "$HOME/.local/share/godot/export_templates/4.3.stable/" | head -30
+          echo "Android SDK:"
+          ls -lah "$ANDROID_HOME/build-tools/"
+          ls -lah "$ANDROID_HOME/platforms/"
+          echo "Java SDK:"
+          ls -lah "$JAVA_HOME/bin/jarsigner"
+          echo "Debug keystore:"
+          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android
+          echo "Godot editor configuration:"
+          cat "$HOME/.config/godot/editor_settings-4.tres"
       - name: Import and export APK
         run: |
           godot --headless --editor --path . --import
