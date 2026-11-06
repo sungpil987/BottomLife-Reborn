@@ -9,7 +9,7 @@ var soul_power: int = 0
 var offline_report: String = ""
 var tap_level: int = 1
 var auto_level: int = 0
-var business_levels: Array[int] = [0, 0, 0]
+var business_levels: Array[int] = [0, 0, 0, 0, 0]
 var mine_depth: int = 1
 var pickaxe_level: int = 1
 var ore: int = 0
@@ -26,9 +26,9 @@ var mine_art: TextureRect
 var mine_effect_layer: Control
 var mine_flash_tween: Tween
 const MINE_MAX_ENERGY := 10.0
-const BUSINESS_NAMES := ["길거리 노점", "분식 가게", "동네 편의점"]
-const BUSINESS_BASE_COST := [1000.0, 15000.0, 150000.0]
-const BUSINESS_BASE_INCOME := [12.0, 95.0, 780.0]
+const BUSINESS_NAMES := ["길거리 노점", "분식 가게", "동네 편의점", "작은 식당", "동네 마트"]
+const BUSINESS_BASE_COST := [1000.0, 15000.0, 150000.0, 2000000.0, 30000000.0]
+const BUSINESS_BASE_INCOME := [12.0, 95.0, 780.0, 7500.0, 85000.0]
 var current_tab: int = 0
 var header: Label
 var income_label: Label
@@ -111,7 +111,7 @@ func load_game() -> void:
 		auto_level = maxi(0, int(data.get("auto_level", 0)))
 		var saved_business = data.get("business_levels", [0, 0, 0])
 		if saved_business is Array:
-			for i in range(mini(3, saved_business.size())):
+			for i in range(mini(BUSINESS_NAMES.size(), saved_business.size())):
 				business_levels[i] = clampi(int(saved_business[i]), 0, 100000)
 		mine_depth = maxi(1, int(data.get("mine_depth", 1)))
 		pickaxe_level = maxi(1, int(data.get("pickaxe_level", 1)))
@@ -180,7 +180,7 @@ func refresh_upgrade_buttons() -> void:
 			mine_buttons[2].disabled = ore < mine_depth_cost()
 	for i in range(business_buttons.size()):
 		if is_instance_valid(business_buttons[i]):
-			business_buttons[i].disabled = money < business_cost(i)
+			business_buttons[i].disabled = business_purchase_count(i) == 0
 			business_buttons[i].text = "확장 x%d\n%s원" % [business_purchase_count(i), number(business_purchase_cost(i, business_purchase_count(i)))] if business_purchase_count(i) > 0 else "구매 불가"
 	if is_instance_valid(tap_upgrade_button):
 		tap_upgrade_button.disabled = money < 100.0 * pow(1.35, tap_level - 1)
@@ -329,7 +329,7 @@ func build_rebirth() -> void:
 
 func total_auto_income() -> float:
 	var result := float(auto_level) * 5.0
-	for i in range(3):
+	for i in range(BUSINESS_NAMES.size()):
 		result += float(business_levels[i]) * BUSINESS_BASE_INCOME[i] * business_milestone_multiplier(business_levels[i])
 	return result
 
@@ -406,7 +406,7 @@ func build_business() -> void:
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rows.add_theme_constant_override("separation", 12)
 	scroll.add_child(rows)
-	for i in range(3):
+	for i in range(BUSINESS_NAMES.size()):
 		var panel := PanelContainer.new()
 		panel.add_theme_stylebox_override("panel", panel_style(Color("#24212c"), Color("#826744"), 2))
 		rows.add_child(panel)
@@ -416,8 +416,9 @@ func build_business() -> void:
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(info)
 		info.add_child(make_label("%s  Lv.%d" % [BUSINESS_NAMES[i], business_levels[i]], 23))
-		info.add_child(make_label("+%s원/초" % number(float(business_levels[i]) * BUSINESS_BASE_INCOME[i] * business_milestone_multiplier(business_levels[i])), 19))
-		info.add_child(make_label("달성 보너스 x%.0f (25/50/100레벨)" % business_milestone_multiplier(business_levels[i]), 16))
+		info.add_child(make_label("+%s원/초" % number(float(business_levels[i]) * BUSINESS_BASE_INCOME[i] * business_milestone_multiplier(business_levels[i]) * prestige_multiplier()), 19))
+		var next_goal := 25 if business_levels[i] < 25 else (50 if business_levels[i] < 50 else (100 if business_levels[i] < 100 else 0))
+		info.add_child(make_label("다음 보너스: Lv.%d (%d 남음)" % [next_goal, next_goal - business_levels[i]] if next_goal > 0 else "모든 단계 보너스 달성!", 16))
 		var count := business_purchase_count(i)
 		var cost := business_purchase_cost(i, count)
 		var button := make_button("확장 x%d\n%s원" % [count, number(cost)] if count > 0 else "구매 불가")
