@@ -24,6 +24,8 @@ var mine_sell_button: Button
 var mine_craft_buttons: Array[Button] = []
 var mine_resource_label: Label
 var mine_result_label: Label
+var detail_scroll: ScrollContainer
+var detail_scroll_position: int = 0
 var mine_status: Label
 var mine_energy_bar: ProgressBar
 var rare_ore: int = 0
@@ -263,6 +265,7 @@ func build_ui() -> void:
 		tab_buttons.append(b)
 
 func change_tab(index: int) -> void:
+	detail_scroll_position = 0
 	current_tab = index
 	for i in range(tab_buttons.size()):
 		decorate_button(tab_buttons[i], i == index)
@@ -536,7 +539,7 @@ func mine_dig() -> void:
 		gems += found
 		last_mine_find = "희귀 보석 %d개 발견!" % found
 	else:
-		last_mine_find = "희귀 광물 발견!" if found_rare else "광석 %d개 획득" % pickaxe_level
+		last_mine_find = "희귀 광물 발견!" if found_rare else "광석 %d개 획득" % (pickaxe_level + drill_level)
 	save_game()
 	refresh()
 	play_mine_hit_effect()
@@ -549,7 +552,7 @@ func play_mine_hit_effect() -> void:
 	mine_art.modulate = Color("#fff0b3")
 	mine_flash_tween = create_tween()
 	mine_flash_tween.tween_property(mine_art, "modulate", Color.WHITE, 0.28)
-	var found_gem := last_mine_find.begins_with("희귀")
+	var found_gem := last_mine_find.begins_with("희귀 보석")
 	var flash := make_label("◆ 보석 발견!" if found_gem else "쾅!  +광석", 31)
 	flash.z_index = 2
 	flash.add_theme_color_override("font_color", Color("#8ef4ff") if found_gem else Color("#ffe0a0"))
@@ -731,6 +734,9 @@ func number(n: float) -> String:
 	return str(int(n))
 
 func refresh() -> void:
+	if is_instance_valid(detail_scroll):
+		detail_scroll_position = detail_scroll.scroll_vertical
+	detail_scroll = null
 	business_buttons.clear()
 	business_income_label = null
 	growth_buttons.clear()
@@ -784,6 +790,13 @@ func wrap_content_scroll() -> void:
 	scroll.add_child(inner)
 	for node in existing:
 		node.reparent(inner)
+	detail_scroll = scroll
+	if detail_scroll_position > 0:
+		call_deferred("restore_detail_scroll", scroll, detail_scroll_position)
+
+func restore_detail_scroll(scroll: ScrollContainer, position: int) -> void:
+	if is_instance_valid(scroll) and scroll == detail_scroll:
+		scroll.scroll_vertical = position
 
 func build_placeholder(title: String, description: String) -> void:
 	content.add_child(make_label(title, 45))
