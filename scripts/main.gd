@@ -61,6 +61,8 @@ var tap_upgrade_button: Button
 var auto_upgrade_button: Button
 var idle_time: float = 0.0
 var pop_tween: Tween
+var street_hit_clock: float = 0.0
+var street_hit_phase: int = 0
 var tap_combo: int = 0
 var tap_combo_clock: float = 0.0
 var combo_label: Label
@@ -85,6 +87,10 @@ func _process(delta: float) -> void:
 	save_clock += delta
 	ui_clock += delta
 	idle_time += delta
+	if street_hit_clock > 0.0:
+		street_hit_clock = maxf(0.0, street_hit_clock - delta)
+		if street_hit_clock == 0.0 and is_instance_valid(hero_sprite):
+			hero_sprite.rotation_degrees = 0.0
 	if tap_combo > 0:
 		tap_combo_clock += delta
 		if tap_combo_clock >= 2.0:
@@ -991,6 +997,8 @@ func build_street() -> void:
 	hero_blink_clock = 0.0
 	hero_blink_active = false
 	hero.pivot_offset = Vector2(0, 0)
+	street_hit_clock = 0.0
+	street_hit_phase = 0
 	hero_idle_tween = create_tween().set_loops()
 	hero_idle_tween.tween_property(hero, "modulate", Color("#d7d0e1"), 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	hero_idle_tween.tween_property(hero, "modulate", Color.WHITE, 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
@@ -1067,17 +1075,44 @@ func tap_money() -> void:
 	if is_instance_valid(combo_label):
 		combo_label.text = "COMBO %d  ·  터치 수익 x%.2f" % [tap_combo, combo_multiplier]
 	spawn_floating_money(earned)
+	spawn_street_hit_sparks()
 	if is_instance_valid(hero_sprite):
 		if pop_tween and pop_tween.is_running():
 			pop_tween.kill()
-		hero_sprite.scale = Vector2(0.91, 0.91)
-		hero_sprite.modulate = Color("#ffe2ad")
+		street_hit_clock = 0.22
+		street_hit_phase += 1
+		hero_sprite.pivot_offset = hero_sprite.size * 0.5
+		hero_sprite.scale = Vector2(0.93, 0.86)
+		hero_sprite.rotation_degrees = -5.0 if street_hit_phase % 2 == 0 else 5.0
+		hero_sprite.modulate = Color("#fff0c9")
 		pop_tween = create_tween()
 		pop_tween.set_parallel(true)
-		pop_tween.tween_property(hero_sprite, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		pop_tween.tween_property(hero_sprite, "modulate", Color.WHITE, 0.18)
+		pop_tween.tween_property(hero_sprite, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		pop_tween.tween_property(hero_sprite, "rotation_degrees", 0.0, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		pop_tween.tween_property(hero_sprite, "modulate", Color.WHITE, 0.22)
 	refresh_header()
 	refresh_upgrade_buttons()
+
+func spawn_street_hit_sparks() -> void:
+	if not is_instance_valid(float_layer):
+		return
+	var center: Vector2 = float_layer.size * Vector2(0.50, 0.58)
+	for i in range(4):
+		var spark: ColorRect = ColorRect.new()
+		spark.color = Color("#ffdc84") if tap_combo < 30 else Color("#8ef4ff")
+		spark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		spark.size = Vector2(5.0, 5.0)
+		spark.position = center
+		float_layer.add_child(spark)
+		var angle: float = TAU * float(i) / 4.0 + float(street_hit_phase % 2) * 0.35
+		var distance: float = 23.0 + float(tap_combo % 4) * 5.0
+		var target: Vector2 = center + Vector2(cos(angle), sin(angle)) * distance
+		var burst: Tween = create_tween()
+		burst.set_parallel(true)
+		burst.tween_property(spark, "position", target, 0.32)
+		burst.tween_property(spark, "modulate:a", 0.0, 0.32)
+		burst.set_parallel(false)
+		burst.tween_callback(spark.queue_free)
 
 func spawn_floating_money(earned: float) -> void:
 	if not is_instance_valid(float_layer):
