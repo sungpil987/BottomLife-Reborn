@@ -58,9 +58,14 @@ func _run() -> void:
 		quit(1)
 		return
 	var before: float = float(game.get("money"))
+	var lifetime_before_tap: float = float(game.get("lifetime_earned"))
 	game.call("tap_money")
 	if float(game.get("money")) <= before:
 		push_error("Smoke test: tapping did not earn money")
+		quit(1)
+		return
+	if float(game.get("lifetime_earned")) <= lifetime_before_tap:
+		push_error("Smoke test: tapping did not count toward lifetime wealth")
 		quit(1)
 		return
 	game.call("save_game")
@@ -97,9 +102,14 @@ func _run() -> void:
 	game.call("change_tab", 2)
 	game.set("mine_energy", 10.0)
 	var ore_before: int = int(game.get("ore"))
+	var lifetime_before_mining: float = float(game.get("lifetime_earned"))
 	game.call("mine_dig")
 	if int(game.get("ore")) <= ore_before:
 		push_error("Smoke test: mining did not award ore")
+		quit(1)
+		return
+	if float(game.get("lifetime_earned")) <= lifetime_before_mining:
+		push_error("Smoke test: mining did not count toward lifetime wealth")
 		quit(1)
 		return
 	game.set("run_earned", 1000000.0)
