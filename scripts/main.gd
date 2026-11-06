@@ -1,6 +1,7 @@
 extends Control
 
 const SAVE_PATH = "user://bottomlife_v1.json"
+const SAVE_BACKUP_PATH = "user://bottomlife_v1.backup.json"
 var money: float = 0.0
 var run_earned: float = 0.0
 var rebirth_count: int = 0
@@ -144,6 +145,10 @@ func load_game() -> void:
 	if file == null:
 		return
 	var data = JSON.parse_string(file.get_as_text())
+	if not (data is Dictionary) and FileAccess.file_exists(SAVE_BACKUP_PATH):
+		data = JSON.parse_string(FileAccess.get_file_as_string(SAVE_BACKUP_PATH))
+		if data is Dictionary:
+			offline_report = "저장 파일 손상 감지 · 이전 백업 복원"
 	if data is Dictionary:
 		money = maxf(0.0, float(data.get("money", 0.0)))
 		run_earned = maxf(money, float(data.get("run_earned", money)))
@@ -186,6 +191,11 @@ func load_game() -> void:
 				offline_report = "부재중 수익 +%s원 (%d분)" % [number(offline_gain), int(elapsed / 60.0)]
 
 func save_game() -> void:
+	# Keep the last valid save before overwriting the primary file.
+	if FileAccess.file_exists(SAVE_PATH):
+		var previous = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
+		if previous is Dictionary:
+			DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(SAVE_BACKUP_PATH))
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
 		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "street_taps": street_taps, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "mine_energy": mine_energy, "mine_dig_counter": mine_dig_counter, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
