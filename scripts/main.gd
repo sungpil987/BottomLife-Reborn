@@ -763,10 +763,25 @@ func refresh() -> void:
 			build_business()
 		2:
 			build_mine()
+			wrap_mine_scroll()
 		3:
 			build_growth()
 		4:
 			build_rebirth()
+
+func wrap_mine_scroll() -> void:
+	# Keep the bottom navigation visible even on short Android screens.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var inner := VBoxContainer.new()
+	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inner.add_theme_constant_override("separation", 8)
+	for node in content.get_children():
+		node.reparent(inner)
+	content.add_child(scroll)
+	scroll.add_child(inner)
 
 func build_placeholder(title: String, description: String) -> void:
 	content.add_child(make_label(title, 45))
