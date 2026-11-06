@@ -8,6 +8,10 @@ var rebirth_count: int = 0
 var soul_points: int = 0
 var soul_power: int = 0
 var legacy_capital: int = 0
+var lifetime_earned: float = 0.0
+var claimed_wealth: Array[int] = []
+const WEALTH_MILESTONES := [1000000.0, 100000000.0, 10000000000.0, 1000000000000.0]
+const WEALTH_REWARDS := [3, 12, 35, 100]
 var offline_report: String = ""
 var tap_level: int = 1
 var auto_level: int = 0
@@ -103,6 +107,7 @@ func _process(delta: float) -> void:
 	var gain := total_auto_income() * delta * prestige_multiplier()
 	money += gain
 	run_earned += gain
+	lifetime_earned += gain
 	save_clock += delta
 	ui_clock += delta
 	idle_time += delta
@@ -168,6 +173,13 @@ func load_game() -> void:
 		soul_points = maxi(0, int(data.get("soul_points", 0)))
 		soul_power = clampi(int(data.get("soul_power", 0)), 0, 1000)
 		legacy_capital = clampi(int(data.get("legacy_capital", 0)), 0, 100)
+		lifetime_earned = maxf(0.0, float(data.get("lifetime_earned", run_earned)))
+		var saved_wealth = data.get("claimed_wealth", [])
+		if saved_wealth is Array:
+			for milestone in saved_wealth:
+				var wealth_index: int = int(milestone)
+				if wealth_index >= 0 and wealth_index < WEALTH_MILESTONES.size() and not claimed_wealth.has(wealth_index):
+					claimed_wealth.append(wealth_index)
 		soul_mining = clampi(int(data.get("soul_mining", 0)), 0, 100)
 		var saved_legacy = data.get("claimed_legacy", [])
 		if saved_legacy is Array:
@@ -219,7 +231,7 @@ func save_game() -> void:
 			DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(SAVE_BACKUP_PATH))
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "street_taps": street_taps, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "mine_energy": mine_energy, "mine_dig_counter": mine_dig_counter, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "legacy_capital": legacy_capital, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
+		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "street_taps": street_taps, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "mine_energy": mine_energy, "mine_dig_counter": mine_dig_counter, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "legacy_capital": legacy_capital, "lifetime_earned": lifetime_earned, "claimed_wealth": claimed_wealth, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
@@ -402,6 +414,16 @@ func rebirth_reward() -> int:
 func soul_upgrade_cost() -> int:
 	return 1 + int(soul_power / 5)
 
+func claim_wealth(index: int) -> void:
+	if index < 0 or index >= WEALTH_MILESTONES.size():
+		return
+	if claimed_wealth.has(index) or lifetime_earned < WEALTH_MILESTONES[index]:
+		return
+	claimed_wealth.append(index)
+	soul_points += WEALTH_REWARDS[index]
+	save_game()
+	refresh()
+
 func claim_legacy(milestone: int) -> void:
 	var index := LEGACY_MILESTONES.find(milestone)
 	if index < 0 or rebirth_count < milestone or claimed_legacy.has(milestone):
@@ -528,6 +550,15 @@ func build_rebirth() -> void:
 	button.pressed.connect(request_rebirth)
 	content.add_child(button)
 	content.add_child(make_label("새로운 광산 지역 · 환생 3회에 지하도시 / 10회에 태고의 심층 해금", 19))
+	content.add_child(make_label("누적 자산 업적 · 영구 영혼 보상", 23))
+	content.add_child(make_label("역대 누적 수익  %s원" % number(lifetime_earned), 20))
+	for i in range(WEALTH_MILESTONES.size()):
+		var unlocked: bool = lifetime_earned >= WEALTH_MILESTONES[i]
+		var claimed: bool = claimed_wealth.has(i)
+		var wealth_button := make_button("역대 %s원 달성 · 영혼 +%d\n%s" % [number(WEALTH_MILESTONES[i]), WEALTH_REWARDS[i], "수령 완료" if claimed else ("보상 받기" if unlocked else "미달성")])
+		wealth_button.disabled = claimed or not unlocked
+		wealth_button.pressed.connect(claim_wealth.bind(i))
+		content.add_child(wealth_button)
 	content.add_child(make_label("환생 업적 · 영구 보상", 23))
 	for i in range(LEGACY_MILESTONES.size()):
 		var milestone: int = LEGACY_MILESTONES[i]
@@ -795,6 +826,7 @@ func mine_dig() -> void:
 	reward *= prestige_multiplier() * mine_zone_bonus() * soul_mining_multiplier()
 	money += reward
 	run_earned += reward
+	lifetime_earned += reward
 	ore += maxi(1, int(ceil(float(pickaxe_level + drill_level) * soul_mining_multiplier())))
 	var rare_chance := minf(0.25, 0.01 + float(mine_depth) * 0.002)
 	var found_rare := randf() < rare_chance
@@ -1348,6 +1380,7 @@ func tap_money() -> void:
 	var earned: float = float(tap_level) * 10.0 * prestige_multiplier() * combo_multiplier
 	money += earned
 	run_earned += earned
+	lifetime_earned += earned
 	feedback.text = "+%s원!" % number(earned)
 	if street_taps % 25 == 0:
 		feedback.text = trigger_street_event()
