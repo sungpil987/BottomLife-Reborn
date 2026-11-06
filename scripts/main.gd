@@ -10,6 +10,11 @@ var income_label: Label
 var content: VBoxContainer
 var feedback: Label
 var save_clock: float = 0.0
+var hero_sprite: TextureRect
+var tap_upgrade_button: Button
+var auto_upgrade_button: Button
+var idle_time: float = 0.0
+var pop_tween: Tween
 
 func _ready() -> void:
 	load_game()
@@ -19,10 +24,14 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	money += float(auto_level) * 5.0 * delta
 	save_clock += delta
+	idle_time += delta
+	if is_instance_valid(hero_sprite):
+		hero_sprite.position.y = sin(idle_time * 2.1) * 4.0
 	if save_clock >= 10.0:
 		save_clock = 0.0
 		save_game()
 	refresh_header()
+	refresh_upgrade_buttons()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
@@ -54,24 +63,56 @@ func make_label(value: String, size: int = 27) -> Label:
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return label
 
+func panel_style(bg: Color, outline: Color, radius: int = 16) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg
+	style.border_color = outline
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(radius)
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 12.0
+	style.content_margin_bottom = 12.0
+	return style
+
+func decorate_button(button: Button, gold: bool = false) -> void:
+	var normal := panel_style(Color("#bc8849") if gold else Color("#24232d"), Color("#f0c47a") if gold else Color("#75614f"))
+	var hover := panel_style(Color("#d9a55b") if gold else Color("#37323c"), Color("#ffe1a0"))
+	var pressed := panel_style(Color("#94652f") if gold else Color("#171720"), Color("#f0c47a"))
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("disabled", panel_style(Color("#25242b"), Color("#4c4441")))
+	button.add_theme_color_override("font_color", Color("#16151b") if gold else Color("#f8e6c9"))
+	button.add_theme_color_override("font_disabled_color", Color("#a29b95"))
+	button.add_theme_color_override("font_hover_color", Color("#16151b") if gold else Color("#ffffff"))
+
+func refresh_upgrade_buttons() -> void:
+	if is_instance_valid(tap_upgrade_button):
+		tap_upgrade_button.disabled = money < 100.0 * pow(1.35, tap_level - 1)
+	if is_instance_valid(auto_upgrade_button):
+		auto_upgrade_button.disabled = money < 250.0 * pow(1.42, auto_level)
+
 func make_button(value: String) -> Button:
 	var button := Button.new()
 	button.text = value
 	button.custom_minimum_size = Vector2(0, 85)
 	button.add_theme_font_size_override("font_size", 23)
+	decorate_button(button)
 	return button
 
 func build_ui() -> void:
 	var bg := ColorRect.new()
-	bg.color = Color("#10131d")
+	bg.color = Color("#111016")
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	var outer := VBoxContainer.new()
 	outer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	outer.add_theme_constant_override("separation", 12)
+	outer.add_theme_constant_override("separation", 8)
 	add_child(outer)
 	var top := PanelContainer.new()
-	top.custom_minimum_size.y = 128
+	top.custom_minimum_size.y = 120
+	top.add_theme_stylebox_override("panel", panel_style(Color("#1e1b26"), Color("#ad8652"), 8))
 	outer.add_child(top)
 	var top_box := VBoxContainer.new()
 	top.add_child(top_box)
@@ -84,7 +125,7 @@ func build_ui() -> void:
 	content.add_theme_constant_override("separation", 16)
 	outer.add_child(content)
 	var bottom := HBoxContainer.new()
-	bottom.custom_minimum_size.y = 105
+	bottom.custom_minimum_size.y = 104
 	bottom.add_theme_constant_override("separation", 4)
 	outer.add_child(bottom)
 	var tabs := ["거리", "사업", "광산", "성장", "메뉴"]
@@ -92,6 +133,7 @@ func build_ui() -> void:
 		var b := make_button(tabs[i])
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.add_theme_font_size_override("font_size", 20)
+		decorate_button(b, i == current_tab)
 		b.pressed.connect(change_tab.bind(i))
 		bottom.add_child(b)
 
@@ -115,6 +157,9 @@ func number(n: float) -> String:
 	return str(int(n))
 
 func refresh() -> void:
+	hero_sprite = null
+	tap_upgrade_button = null
+	auto_upgrade_button = null
 	refresh_header()
 	for child in content.get_children():
 		content.remove_child(child)
@@ -159,6 +204,7 @@ func build_street() -> void:
 	hero.anchor_bottom = 0.90
 	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(hero)
+	hero_sprite = hero
 	var tap := Button.new()
 	tap.flat = true
 	tap.text = ""
@@ -178,20 +224,27 @@ func build_street() -> void:
 	tap_upgrade.disabled = money < tap_cost
 	tap_upgrade.pressed.connect(buy_tap)
 	content.add_child(tap_upgrade)
+	tap_upgrade_button = tap_upgrade
+	decorate_button(tap_upgrade, true)
 	var auto_cost := 250.0 * pow(1.42, auto_level)
 	var auto_upgrade := make_button("자동 수익 Lv.%d    |    %s원" % [auto_level, number(auto_cost)])
 	auto_upgrade.disabled = money < auto_cost
 	auto_upgrade.pressed.connect(buy_auto)
 	content.add_child(auto_upgrade)
+	auto_upgrade_button = auto_upgrade
+	decorate_button(auto_upgrade, true)
 
 func tap_money() -> void:
 	money += tap_level * 10.0
 	feedback.text = "+%s원!" % number(tap_level * 10.0)
+	if is_instance_valid(hero_sprite):
+		if pop_tween and pop_tween.is_running():
+			pop_tween.kill()
+		hero_sprite.scale = Vector2(0.96, 0.96)
+		pop_tween = create_tween()
+		pop_tween.tween_property(hero_sprite, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	refresh_header()
-	# Preserve tap target while allowing upgrade buttons to update.
-	for child in content.get_children():
-		if child is Button:
-			child.disabled = money < (100.0 * pow(1.35, tap_level - 1) if child == content.get_child(content.get_child_count() - 2) else 250.0 * pow(1.42, auto_level))
+	refresh_upgrade_buttons()
 
 func buy_tap() -> void:
 	var cost := 100.0 * pow(1.35, tap_level - 1)
