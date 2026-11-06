@@ -41,6 +41,7 @@ var drill_level: int = 0
 var refinery_level: int = 0
 var mine_art: TextureRect
 var mine_effect_layer: Control
+var mine_crystal_overlay: Control
 var mine_flash_tween: Tween
 const MINE_MAX_ENERGY := 10.0
 const BUSINESS_NAMES := ["길거리 노점", "분식 가게", "동네 편의점", "작은 식당", "동네 마트"]
@@ -717,6 +718,8 @@ func mine_dig() -> void:
 		mine_event_flash = true
 	save_game()
 	refresh()
+	if is_instance_valid(mine_crystal_overlay):
+		mine_crystal_overlay.call("strike")
 	play_mine_hit_effect()
 
 func play_mine_hit_effect() -> void:
@@ -876,6 +879,7 @@ func build_mine() -> void:
 	mineral_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mineral_overlay.set("zone", 5 if mine_depth >= 125 else (4 if mine_depth >= 75 else (3 if mine_depth >= 50 else (2 if mine_depth >= 25 else (1 if mine_depth >= 10 else 0)))))
 	stage.add_child(mineral_overlay)
+	mine_crystal_overlay = mineral_overlay
 	mine_effect_layer = Control.new()
 	mine_effect_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mine_effect_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -967,6 +971,7 @@ func refresh() -> void:
 	mine_energy_bar = null
 	mine_art = null
 	mine_effect_layer = null
+	mine_crystal_overlay = null
 	if hero_idle_tween and hero_idle_tween.is_running():
 		hero_idle_tween.kill()
 	hero_sprite = null
