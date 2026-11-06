@@ -50,6 +50,7 @@ var street_stage: Control
 var float_layer: Control
 var tab_buttons: Array[Button] = []
 var business_buttons: Array[Button] = []
+var business_buy_mode: int = 1
 var tap_cost_label: Label
 var auto_cost_label: Label
 
@@ -180,6 +181,7 @@ func refresh_upgrade_buttons() -> void:
 	for i in range(business_buttons.size()):
 		if is_instance_valid(business_buttons[i]):
 			business_buttons[i].disabled = money < business_cost(i)
+			business_buttons[i].text = "확장 x%d\n%s원" % [business_purchase_count(i), number(business_purchase_cost(i, business_purchase_count(i)))] if business_purchase_count(i) > 0 else "구매 불가"
 	if is_instance_valid(tap_upgrade_button):
 		tap_upgrade_button.disabled = money < 100.0 * pow(1.35, tap_level - 1)
 	if is_instance_valid(auto_upgrade_button):
@@ -343,12 +345,37 @@ func business_milestone_multiplier(level: int) -> float:
 func business_cost(index: int) -> float:
 	return BUSINESS_BASE_COST[index] * pow(1.24, business_levels[index])
 
-func buy_business(index: int) -> void:
+func business_purchase_cost(index: int, count: int) -> float:
+	if count <= 0:
+		return 0.0
+	var first := business_cost(index)
+	var growth := 1.24
+	return first * (pow(growth, count) - 1.0) / (growth - 1.0)
+
+func business_purchase_count(index: int) -> int:
+	var count := 0
+	var budget := money
 	var cost := business_cost(index)
+	var limit := 1000 if business_buy_mode == 0 else business_buy_mode
+	while count < limit and budget >= cost and business_levels[index] + count < 100000:
+		budget -= cost
+		count += 1
+		cost *= 1.24
+	return count
+
+func set_business_buy_mode(mode: int) -> void:
+	business_buy_mode = mode
+	refresh()
+
+func buy_business(index: int) -> void:
+	var count := business_purchase_count(index)
+	if count <= 0:
+		return
+	var cost := business_purchase_cost(index, count)
 	if money < cost:
 		return
 	money -= cost
-	business_levels[index] += 1
+	business_levels[index] += count
 	save_game()
 	refresh()
 
@@ -362,6 +389,16 @@ func build_business() -> void:
 	art.custom_minimum_size.y = 190
 	content.add_child(art)
 	content.add_child(make_label("사업 수익  +%s원/초" % number((total_auto_income() - float(auto_level) * 5.0) * prestige_multiplier()), 26))
+	var mode_row := HBoxContainer.new()
+	mode_row.add_theme_constant_override("separation", 6)
+	content.add_child(mode_row)
+	for mode in [1, 10, 0]:
+		var mode_button := make_button("x%d" % mode if mode > 0 else "최대")
+		mode_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		mode_button.custom_minimum_size.y = 60
+		decorate_button(mode_button, mode == business_buy_mode)
+		mode_button.pressed.connect(set_business_buy_mode.bind(mode))
+		mode_row.add_child(mode_button)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_child(scroll)
@@ -381,10 +418,11 @@ func build_business() -> void:
 		info.add_child(make_label("%s  Lv.%d" % [BUSINESS_NAMES[i], business_levels[i]], 23))
 		info.add_child(make_label("+%s원/초" % number(float(business_levels[i]) * BUSINESS_BASE_INCOME[i] * business_milestone_multiplier(business_levels[i])), 19))
 		info.add_child(make_label("달성 보너스 x%.0f (25/50/100레벨)" % business_milestone_multiplier(business_levels[i]), 16))
-		var cost := business_cost(i)
-		var button := make_button("확장\n%s원" % number(cost))
+		var count := business_purchase_count(i)
+		var cost := business_purchase_cost(i, count)
+		var button := make_button("확장 x%d\n%s원" % [count, number(cost)] if count > 0 else "구매 불가")
 		button.custom_minimum_size = Vector2(180, 88)
-		button.disabled = money < cost
+		button.disabled = count == 0
 		button.pressed.connect(buy_business.bind(i))
 		row.add_child(button)
 		business_buttons.append(button)
