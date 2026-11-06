@@ -312,6 +312,8 @@ func change_tab(index: int) -> void:
 		return
 	if is_instance_valid(detail_scroll):
 		tab_scroll_positions[current_tab] = detail_scroll.scroll_vertical
+		# The old tab's scroll container must not overwrite the new tab's position.
+		detail_scroll = null
 	current_tab = index
 	detail_scroll_position = tab_scroll_positions[index]
 	for i in range(tab_buttons.size()):
