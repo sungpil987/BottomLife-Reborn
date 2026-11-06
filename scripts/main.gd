@@ -778,10 +778,11 @@ func wrap_mine_scroll() -> void:
 	var inner := VBoxContainer.new()
 	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	inner.add_theme_constant_override("separation", 8)
-	for node in content.get_children():
-		node.reparent(inner)
+	var existing := content.get_children()
 	content.add_child(scroll)
 	scroll.add_child(inner)
+	for node in existing:
+		node.reparent(inner)
 
 func build_placeholder(title: String, description: String) -> void:
 	content.add_child(make_label(title, 45))
