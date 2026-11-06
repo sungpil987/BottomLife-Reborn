@@ -84,6 +84,7 @@ var float_layer: Control
 var tab_buttons: Array[Button] = []
 var business_buttons: Array[Button] = []
 var business_income_label: Label
+var business_purchase_notice: String = ""
 var business_buy_mode: int = 1
 var tap_cost_label: Label
 var auto_cost_label: Label
@@ -533,14 +534,28 @@ func buy_business(index: int) -> void:
 	if money + maxf(0.000001, money * 0.000000000001) < cost:
 		return
 	money -= cost
+	var old_level: int = business_levels[index]
 	business_levels[index] += count
+	var new_level: int = business_levels[index]
+	var reached: int = 0
+	for milestone in [25, 50, 100]:
+		if old_level < milestone and new_level >= milestone:
+			reached = milestone
+	if reached > 0:
+		business_purchase_notice = "%s Lv.%d 달성! 수익 보너스 해금!" % [BUSINESS_NAMES[index], reached]
+	else:
+		business_purchase_notice = "%s +%d레벨 확장 완료" % [BUSINESS_NAMES[index], count]
 	save_game()
 	refresh()
 
 func build_business() -> void:
 	content.add_child(make_label("나만의 사업 거리", 27))
+	if business_purchase_notice != "":
+		var notice := make_label(business_purchase_notice, 20)
+		notice.add_theme_color_override("font_color", Color("#f7d38a"))
+		content.add_child(notice)
 	var business_stage := Control.new()
-	business_stage.custom_minimum_size.y = 180
+	business_stage.custom_minimum_size.y = 192
 	business_stage.clip_contents = true
 	content.add_child(business_stage)
 	var art := TextureRect.new()
@@ -582,14 +597,19 @@ func build_business() -> void:
 	scroll.add_child(rows)
 	for i in range(BUSINESS_NAMES.size()):
 		var panel := PanelContainer.new()
-		panel.add_theme_stylebox_override("panel", panel_style(Color("#24212c"), Color("#826744"), 2))
+		var owned: bool = business_levels[i] > 0
+		var accent: Color = Color("#f0c878") if business_levels[i] >= 100 else (Color("#69d3c5") if business_levels[i] >= 50 else (Color("#b49d77") if owned else Color("#514c52")))
+		panel.add_theme_stylebox_override("panel", panel_style(Color("#24212c") if owned else Color("#1b1d26"), accent, 3))
 		rows.add_child(panel)
 		var row := HBoxContainer.new()
 		panel.add_child(row)
 		var info := VBoxContainer.new()
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(info)
-		info.add_child(make_label("%s  Lv.%d" % [BUSINESS_NAMES[i], business_levels[i]], 20))
+		var rank: String = "전설" if business_levels[i] >= 100 else ("번영" if business_levels[i] >= 50 else ("성장" if business_levels[i] >= 25 else ("운영 중" if owned else "미개업")))
+		var rank_label := make_label("%s  Lv.%d  ·  %s" % [BUSINESS_NAMES[i], business_levels[i], rank], 20)
+		rank_label.add_theme_color_override("font_color", accent)
+		info.add_child(rank_label)
 		info.add_child(make_label("+%s원/초" % number(float(business_levels[i]) * BUSINESS_BASE_INCOME[i] * business_milestone_multiplier(business_levels[i]) * prestige_multiplier()), 19))
 		var next_goal := 25 if business_levels[i] < 25 else (50 if business_levels[i] < 50 else (100 if business_levels[i] < 100 else 0))
 		info.add_child(make_label("다음 보너스: Lv.%d (%d 남음)" % [next_goal, next_goal - business_levels[i]] if next_goal > 0 else "모든 단계 보너스 달성!", 16))
