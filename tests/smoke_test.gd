@@ -115,7 +115,29 @@ func _run() -> void:
 		push_error("Smoke test: rebirth reset or permanent progression failed")
 		quit(1)
 		return
-	print("SMOKE TEST PASSED: scene, five tabs, tapping, save/load, business, mining, rebirth")
+	# A corrupted primary save must recover from the previous valid backup.
+	game.call("save_game")
+	if not FileAccess.file_exists("user://bottomlife_v1.backup.json"):
+		push_error("Smoke test: backup save missing")
+		quit(1)
+		return
+	var backup_file := FileAccess.open("user://bottomlife_v1.json", FileAccess.WRITE)
+	if backup_file == null:
+		push_error("Smoke test: could not simulate corrupted save")
+		quit(1)
+		return
+	backup_file.store_string("{invalid json")
+	backup_file.close()
+	game.queue_free()
+	await process_frame
+	game = scene.instantiate()
+	root.add_child(game)
+	await process_frame
+	if int(game.get("rebirth_count")) < rebirth_before + 1:
+		push_error("Smoke test: corrupted save backup recovery failed")
+		quit(1)
+		return
+	print("SMOKE TEST PASSED: scene, tabs, tapping, business, mining, rebirth, save restart, backup recovery")
 	game.queue_free()
 	await process_frame
 	quit(0)
