@@ -74,10 +74,22 @@ jobs:
           fi
       - name: Import and export APK
         run: |
-          godot --headless --editor --path . --import
+          set -o pipefail
           mkdir -p build
-          godot --headless --verbose --path . --export-debug Android build/BottomLife-debug.apk
+          godot --headless --verbose --path . --export-debug Android build/BottomLife-debug.apk 2>&1 | tee godot-export.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|ERROR:.*(export|script|parse)" godot-export.log; then
+            echo "Godot export errors detected"
+            exit 1
+          fi
           test -s build/BottomLife-debug.apk
+      - name: Verify APK package and signing
+        run: |
+          set -euo pipefail
+          unzip -t build/BottomLife-debug.apk | tail -2
+          "$ANDROID_HOME/build-tools/34.0.0/aapt" dump badging build/BottomLife-debug.apk | tee apk-badging.log
+          grep -q "package: name='com.bottomlife.reborn'" apk-badging.log
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose build/BottomLife-debug.apk | tee apk-signature.log
+          sha256sum build/BottomLife-debug.apk | tee apk-sha256.txt
       - name: Upload Godot diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -86,6 +98,10 @@ jobs:
           path: |
             godot-import.log
             godot-validation.log
+            godot-export.log
+            apk-badging.log
+            apk-signature.log
+            apk-sha256.txt
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
