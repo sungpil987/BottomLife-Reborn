@@ -72,6 +72,27 @@ jobs:
             echo "Godot script validation failed"
             exit 1
           fi
+      - name: Check gameplay and save invariants
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path("scripts/main.gd").read_text()
+          tests = Path("tests/smoke_test.gd").read_text()
+          checks = {
+              "single notification handler": source.count("func _notification(") == 1,
+              "offline wealth accounting": "lifetime_earned += offline_gain" in source,
+              "tap wealth accounting": "lifetime_earned += earned" in source,
+              "mining wealth accounting": "lifetime_earned += reward" in source,
+              "legacy capital saved": '"legacy_capital": legacy_capital' in source,
+              "wealth achievements saved": '"claimed_wealth": claimed_wealth' in source,
+              "legacy regression test": "legacy capital purchase or cost failed" in tests,
+              "wealth regression test": "lifetime wealth milestone rewarded twice" in tests,
+          }
+          for label, ok in checks.items():
+              print(f"{'PASS' if ok else 'FAIL'}: {label}")
+          if not all(checks.values()):
+              raise SystemExit(1)
+          PY
       - name: Run gameplay smoke tests
         run: |
           set -o pipefail
