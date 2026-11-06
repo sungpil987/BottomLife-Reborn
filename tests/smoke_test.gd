@@ -38,7 +38,37 @@ func _run() -> void:
 		quit(1)
 		return
 	game.call("load_game")
-	print("SMOKE TEST PASSED: scene, HUD, five tabs, tapping, save and load")
+	# Exercise real gameplay systems after save/load. The CI runner has isolated user data.
+	game.set("money", 100000000.0)
+	game.call("set_business_buy_mode", 1)
+	var business_before: int = int(game.get("business_levels")[0])
+	game.call("buy_business", 0)
+	if int(game.get("business_levels")[0]) != business_before + 1:
+		push_error("Smoke test: business purchase failed")
+		quit(1)
+		return
+	game.call("change_tab", 2)
+	game.set("mine_energy", 10.0)
+	var ore_before: int = int(game.get("ore"))
+	game.call("mine_dig")
+	if int(game.get("ore")) <= ore_before:
+		push_error("Smoke test: mining did not award ore")
+		quit(1)
+		return
+	game.set("run_earned", 1000000.0)
+	game.set("soul_points", 7)
+	game.set("soul_power", 3)
+	var rebirth_before: int = int(game.get("rebirth_count"))
+	game.call("perform_rebirth")
+	if int(game.get("rebirth_count")) != rebirth_before + 1 or int(game.get("soul_points")) < 8:
+		push_error("Smoke test: rebirth reward not granted")
+		quit(1)
+		return
+	if int(game.get("soul_power")) != 3 or int(game.get("business_levels")[0]) != 0 or int(game.get("mine_depth")) != 1:
+		push_error("Smoke test: rebirth reset or permanent progression failed")
+		quit(1)
+		return
+	print("SMOKE TEST PASSED: scene, five tabs, tapping, save/load, business, mining, rebirth")
 	game.queue_free()
 	await process_frame
 	quit(0)
