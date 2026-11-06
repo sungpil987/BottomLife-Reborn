@@ -17,6 +17,7 @@ var gems: int = 0
 var luck_level: int = 0
 var stamina_level: int = 0
 var last_mine_find: String = ""
+var mine_dig_counter: int = 0
 var growth_buttons: Array[Button] = []
 var mine_energy: float = 10.0
 var mine_buttons: Array[Button] = []
@@ -135,6 +136,7 @@ func load_game() -> void:
 			for i in range(mini(BUSINESS_NAMES.size(), saved_business.size())):
 				business_levels[i] = clampi(int(saved_business[i]), 0, 100000)
 		mine_depth = maxi(1, int(data.get("mine_depth", 1)))
+		mine_dig_counter = maxi(0, int(data.get("mine_dig_counter", 0)))
 		pickaxe_level = maxi(1, int(data.get("pickaxe_level", 1)))
 		ore = maxi(0, int(data.get("ore", 0)))
 		rare_ore = maxi(0, int(data.get("rare_ore", 0)))
@@ -156,7 +158,7 @@ func load_game() -> void:
 func save_game() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
+		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "mine_dig_counter": mine_dig_counter, "pickaxe_level": pickaxe_level, "ore": ore, "rare_ore": rare_ore, "drill_level": drill_level, "refinery_level": refinery_level, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level, "run_earned": run_earned, "rebirth_count": rebirth_count, "soul_points": soul_points, "soul_power": soul_power, "soul_mining": soul_mining, "claimed_legacy": claimed_legacy, "saved_at": Time.get_unix_time_from_system()}))
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
@@ -338,6 +340,7 @@ func perform_rebirth() -> void:
 	auto_level = 0
 	business_levels = [0, 0, 0, 0, 0]
 	mine_depth = 1
+	mine_dig_counter = 0
 	pickaxe_level = 1
 	ore = 0
 	rare_ore = 0
@@ -571,10 +574,39 @@ func mine_upgrade_cost() -> float:
 func mine_depth_cost() -> int:
 	return 8 + mine_depth * 5
 
+func mine_event_name() -> String:
+	if mine_depth >= 125:
+		return "태고의 수정 폭발"
+	if mine_depth >= 75:
+		return "지하도시 보물 창고"
+	if mine_depth >= 50:
+		return "심연의 광맥"
+	if mine_depth >= 25:
+		return "황금 광맥"
+	if mine_depth >= 10:
+		return "푸른 광석 군집"
+	return "숨겨진 광석 더미"
+
+func trigger_mine_event() -> String:
+	var bonus_ore: int = maxi(5, (pickaxe_level + drill_level) * 4)
+	var bonus_gems: int = maxi(1, int(mine_depth / 15))
+	var bonus_rare: int = maxi(1, int(mine_depth / 20))
+	if mine_depth >= 75:
+		gems += bonus_gems
+		rare_ore += bonus_rare
+		return "%s! 보석 +%d / 희귀 광물 +%d" % [mine_event_name(), bonus_gems, bonus_rare]
+	if mine_depth >= 25:
+		rare_ore += bonus_rare
+		ore += bonus_ore
+		return "%s! 광석 +%d / 희귀 광물 +%d" % [mine_event_name(), bonus_ore, bonus_rare]
+	ore += bonus_ore
+	return "%s! 광석 +%d" % [mine_event_name(), bonus_ore]
+
 func mine_dig() -> void:
 	if mine_energy < 1.0:
 		return
 	mine_energy -= 1.0
+	mine_dig_counter += 1
 	var reward := float(20 * (pickaxe_level + drill_level) * mine_depth)
 	reward *= prestige_multiplier() * mine_zone_bonus() * soul_mining_multiplier()
 	money += reward
@@ -590,7 +622,9 @@ func mine_dig() -> void:
 		gems += found
 		last_mine_find = "희귀 보석 %d개 발견!" % found
 	else:
-		last_mine_find = "희귀 광물 발견!" if found_rare else "광석 %d개 획득" % (pickaxe_level + drill_level)
+		last_mine_find = "희귀 광물 발견!" if found_rare else "광석 %d개 획득" % maxi(1, int(ceil(float(pickaxe_level + drill_level) * soul_mining_multiplier())))
+	if mine_dig_counter % 15 == 0:
+		last_mine_find = trigger_mine_event()
 	save_game()
 	refresh()
 	play_mine_hit_effect()
@@ -711,6 +745,7 @@ func mine_go_deeper() -> void:
 func build_mine() -> void:
 	content.add_child(make_label("%s  ·  지하 %d층" % [mine_zone_name(), mine_depth], 31))
 	content.add_child(make_label("지역 채굴 수익 x%.1f  |  5층마다 보석 보상" % mine_zone_bonus(), 19))
+	content.add_child(make_label("채굴 이벤트: %s · %d/15회" % [mine_event_name(), mine_dig_counter % 15], 18))
 	if next_mine_rebirth_requirement() > rebirth_count:
 		content.add_child(make_label("다음 지역 잠김 · 환생 %d회 필요" % next_mine_rebirth_requirement(), 20))
 	var stage := Control.new()
