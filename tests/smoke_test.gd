@@ -146,7 +146,22 @@ func _run() -> void:
 		push_error("Smoke test: repaired primary save lost rebirth progress")
 		quit(1)
 		return
-	print("SMOKE TEST PASSED: scene, tabs, tapping, business, mining, rebirth, save restart, backup recovery")
+	# Also recover when the primary save is missing entirely.
+	var delete_error: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path("user://bottomlife_v1.json"))
+	if delete_error != OK:
+		push_error("Smoke test: could not delete primary save")
+		quit(1)
+		return
+	game.queue_free()
+	await process_frame
+	game = scene.instantiate()
+	root.add_child(game)
+	await process_frame
+	if not FileAccess.file_exists("user://bottomlife_v1.json") or int(game.get("rebirth_count")) < rebirth_before + 1:
+		push_error("Smoke test: missing primary save recovery failed")
+		quit(1)
+		return
+	print("SMOKE TEST PASSED: scene, tabs, tapping, business, mining, rebirth, save restart, corrupt/missing backup recovery")
 	game.queue_free()
 	await process_frame
 	quit(0)
