@@ -8,6 +8,11 @@ var business_levels: Array[int] = [0, 0, 0]
 var mine_depth: int = 1
 var pickaxe_level: int = 1
 var ore: int = 0
+var gems: int = 0
+var luck_level: int = 0
+var stamina_level: int = 0
+var last_mine_find: String = ""
+var growth_buttons: Array[Button] = []
 var mine_energy: float = 10.0
 var mine_buttons: Array[Button] = []
 var mine_status: Label
@@ -42,9 +47,9 @@ func _process(delta: float) -> void:
 	money += total_auto_income() * delta
 	save_clock += delta
 	idle_time += delta
-	mine_energy = minf(MINE_MAX_ENERGY, mine_energy + delta * 0.4)
+	mine_energy = minf(max_mine_energy(), mine_energy + delta * (0.4 + float(stamina_level) * 0.08))
 	if is_instance_valid(mine_status):
-		mine_status.text = "곡괭이 Lv.%d  |  기력 %d/10  |  광석 %d개" % [pickaxe_level, int(mine_energy), ore]
+		mine_status.text = "곡괭이 Lv.%d  |  기력 %d/%d  |  광석 %d개" % [pickaxe_level, int(mine_energy), int(max_mine_energy()), ore]
 	if save_clock >= 10.0:
 		save_clock = 0.0
 		save_game()
@@ -73,11 +78,15 @@ func load_game() -> void:
 		mine_depth = maxi(1, int(data.get("mine_depth", 1)))
 		pickaxe_level = maxi(1, int(data.get("pickaxe_level", 1)))
 		ore = maxi(0, int(data.get("ore", 0)))
+		gems = maxi(0, int(data.get("gems", 0)))
+		luck_level = clampi(int(data.get("luck_level", 0)), 0, 50)
+		stamina_level = clampi(int(data.get("stamina_level", 0)), 0, 50)
+		mine_energy = max_mine_energy()
 
 func save_game() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "pickaxe_level": pickaxe_level, "ore": ore}))
+		file.store_string(JSON.stringify({"money": money, "tap_level": tap_level, "auto_level": auto_level, "business_levels": business_levels, "mine_depth": mine_depth, "pickaxe_level": pickaxe_level, "ore": ore, "gems": gems, "luck_level": luck_level, "stamina_level": stamina_level}))
 
 func make_label(value: String, size: int = 27) -> Label:
 	var label := Label.new()
@@ -113,6 +122,9 @@ func decorate_button(button: Button, gold: bool = false) -> void:
 	button.add_theme_color_override("font_hover_color", Color("#16151b") if gold else Color("#ffffff"))
 
 func refresh_upgrade_buttons() -> void:
+	for i in range(growth_buttons.size()):
+		if is_instance_valid(growth_buttons[i]):
+			growth_buttons[i].disabled = gems < growth_cost(i) or (luck_level if i == 0 else stamina_level) >= 50
 	if mine_buttons.size() == 3:
 		if is_instance_valid(mine_buttons[0]):
 			mine_buttons[0].disabled = mine_energy < 1.0
@@ -238,6 +250,54 @@ func build_business() -> void:
 		business_buttons.append(button)
 	content.add_child(make_label("사업은 구매 즉시 자동 수익이 발생합니다.", 19))
 
+func max_mine_energy() -> float:
+	return MINE_MAX_ENERGY + float(stamina_level) * 2.0
+
+func growth_cost(index: int) -> int:
+	var level := luck_level if index == 0 else stamina_level
+	return 2 + level * (level + 3)
+
+func buy_growth(index: int) -> void:
+	var cost := growth_cost(index)
+	if gems < cost:
+		return
+	if index == 0 and luck_level < 50:
+		gems -= cost
+		luck_level += 1
+	elif index == 1 and stamina_level < 50:
+		gems -= cost
+		stamina_level += 1
+	else:
+		return
+	save_game()
+	refresh()
+
+func build_growth() -> void:
+	content.add_child(make_label("생존자의 성장", 34))
+	content.add_child(make_label("보유 보석  ◆ %d개" % gems, 28))
+	content.add_child(make_label("광산에서 희귀 보석을 발견하고 능력을 강화하세요.", 22))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(scroll)
+	var rows := VBoxContainer.new()
+	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(rows)
+	for i in range(2):
+		var level := luck_level if i == 0 else stamina_level
+		var panel := PanelContainer.new()
+		panel.add_theme_stylebox_override("panel", panel_style(Color("#24212c"), Color("#826744"), 12))
+		rows.add_child(panel)
+		var box := VBoxContainer.new()
+		panel.add_child(box)
+		box.add_child(make_label(("행운의 감각" if i == 0 else "강인한 체력") + "  Lv.%d/50" % level, 27))
+		box.add_child(make_label("보석 발견 확률 +%d%%p" % (level * 1) if i == 0 else "최대 기력 +%d / 회복 속도 증가" % (level * 2), 20))
+		var button := make_button("보석 %d개로 강화" % growth_cost(i))
+		button.disabled = gems < growth_cost(i) or level >= 50
+		button.pressed.connect(buy_growth.bind(i))
+		box.add_child(button)
+		growth_buttons.append(button)
+	content.add_child(make_label("행운은 보석 발견 확률을 높여줍니다.", 19))
+
 func mine_upgrade_cost() -> float:
 	return 500.0 * pow(1.65, pickaxe_level - 1)
 
@@ -251,6 +311,13 @@ func mine_dig() -> void:
 	var reward := float(20 * pickaxe_level * mine_depth)
 	money += reward
 	ore += pickaxe_level
+	var chance := minf(0.60, 0.03 + float(luck_level) * 0.01 + float(mine_depth - 1) * 0.002)
+	if randf() < chance:
+		var found := 1 + int(mine_depth / 10)
+		gems += found
+		last_mine_find = "희귀 보석 %d개 발견!" % found
+	else:
+		last_mine_find = "광석 %d개 획득" % pickaxe_level
 	save_game()
 	refresh()
 
@@ -282,6 +349,7 @@ func build_mine() -> void:
 	content.add_child(art)
 	mine_status = make_label("", 24)
 	content.add_child(mine_status)
+	content.add_child(make_label("보석 ◆ %d개   |   %s" % [gems, last_mine_find], 21))
 	var dig := make_button("곡괭이질  +%s원 / 광석 %d개" % [number(float(20 * pickaxe_level * mine_depth)), pickaxe_level])
 	dig.custom_minimum_size.y = 105
 	decorate_button(dig, true)
@@ -299,7 +367,7 @@ func build_mine() -> void:
 	deeper.pressed.connect(mine_go_deeper)
 	content.add_child(deeper)
 	mine_buttons.append(deeper)
-	content.add_child(make_label("기력은 2.5초마다 1씩 회복됩니다.", 19))
+	content.add_child(make_label("기력은 시간이 지나면 자동 회복됩니다.", 19))
 
 func refresh_header() -> void:
 	if header == null:
@@ -318,6 +386,7 @@ func number(n: float) -> String:
 
 func refresh() -> void:
 	business_buttons.clear()
+	growth_buttons.clear()
 	mine_buttons.clear()
 	mine_status = null
 	hero_sprite = null
@@ -339,7 +408,7 @@ func refresh() -> void:
 		2:
 			build_mine()
 		3:
-			build_placeholder("성장", "캐릭터 성장 콘텐츠 준비 중")
+			build_growth()
 		4:
 			build_placeholder("메뉴", "게임은 10초마다 자동 저장됩니다.")
 
