@@ -539,13 +539,24 @@ func buy_business(index: int) -> void:
 
 func build_business() -> void:
 	content.add_child(make_label("나만의 사업 거리", 27))
+	var business_stage := Control.new()
+	business_stage.custom_minimum_size.y = 180
+	business_stage.clip_contents = true
+	content.add_child(business_stage)
 	var art := TextureRect.new()
 	art.texture = load("res://assets/business_stall.svg")
 	art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.custom_minimum_size.y = 118
-	content.add_child(art)
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	business_stage.add_child(art)
+	var city := Control.new()
+	city.set_script(load("res://scripts/business_city.gd"))
+	city.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	city.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	city.set("levels", business_levels.duplicate())
+	business_stage.add_child(city)
 	business_income_label = make_label("사업 수익  +%s원/초" % number((total_auto_income() - float(auto_level) * 5.0) * prestige_multiplier()), 26)
 	content.add_child(business_income_label)
 	var mode_row := HBoxContainer.new()
