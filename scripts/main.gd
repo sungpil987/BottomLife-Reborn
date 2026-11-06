@@ -396,12 +396,12 @@ func request_rebirth() -> void:
 	dialog.popup_centered()
 
 func build_rebirth() -> void:
-	content.add_child(make_label("환생의 제단", 34))
+	content.add_child(make_label("환생의 제단", 28))
 	if offline_report != "":
 		content.add_child(make_label(offline_report, 20))
-	content.add_child(make_label("환생 %d회  |  영혼 %d개" % [rebirth_count, soul_points], 27))
-	content.add_child(make_label("영구 수익 배율  x%.1f" % prestige_multiplier(), 27))
-	content.add_child(make_label("영구 채굴 배율  x%.2f" % soul_mining_multiplier(), 24))
+	content.add_child(make_label("환생 %d회  |  영혼 %d개" % [rebirth_count, soul_points], 23))
+	content.add_child(make_label("영구 수익 배율  x%.1f" % prestige_multiplier(), 22))
+	content.add_child(make_label("영구 채굴 배율  x%.2f" % soul_mining_multiplier(), 21))
 	content.add_child(make_label("이번 회차 누적 획득  %s원" % number(run_earned), 22))
 	var progress := ProgressBar.new()
 	progress.custom_minimum_size.y = 22
@@ -412,6 +412,7 @@ func build_rebirth() -> void:
 	progress.add_theme_stylebox_override("fill", panel_style(Color("#b68dce"), Color("#e2b7fc"), 0))
 	content.add_child(progress)
 	content.add_child(make_label("환생 조건: 회차 누적 100만원", 20))
+	content.add_child(make_label("환생 준비도  %d%%" % int(clampf(run_earned / 1000000.0 * 100.0, 0.0, 100.0)), 19))
 	var reward := rebirth_reward()
 	content.add_child(make_label("현재 환생 보상: 영혼 %d개" % reward, 24))
 	var upgrade := make_button("영혼의 힘 강화  수익 +10%%\n영혼 %d개" % soul_upgrade_cost())
@@ -428,7 +429,7 @@ func build_rebirth() -> void:
 	button.pressed.connect(request_rebirth)
 	content.add_child(button)
 	content.add_child(make_label("새로운 광산 지역 · 환생 3회에 지하도시 / 10회에 태고의 심층 해금", 19))
-	content.add_child(make_label("환생 업적 · 영구 보상", 25))
+	content.add_child(make_label("환생 업적 · 영구 보상", 23))
 	for i in range(LEGACY_MILESTONES.size()):
 		var milestone: int = LEGACY_MILESTONES[i]
 		var claimed: bool = claimed_legacy.has(milestone)
@@ -806,13 +807,13 @@ func mine_go_deeper() -> void:
 	refresh()
 
 func build_mine() -> void:
-	content.add_child(make_label("%s  ·  지하 %d층" % [mine_zone_name(), mine_depth], 31))
+	content.add_child(make_label("%s  ·  지하 %d층" % [mine_zone_name(), mine_depth], 27))
 	content.add_child(make_label("지역 채굴 수익 x%.1f  |  5층마다 보석 보상" % mine_zone_bonus(), 19))
 	content.add_child(make_label("채굴 이벤트: %s · %d/15회" % [mine_event_name(), mine_dig_counter % 15], 18))
 	if next_mine_rebirth_requirement() > rebirth_count:
 		content.add_child(make_label("다음 지역 잠김 · 환생 %d회 필요" % next_mine_rebirth_requirement(), 20))
 	var stage := Control.new()
-	stage.custom_minimum_size.y = 195
+	stage.custom_minimum_size.y = 170
 	stage.clip_contents = true
 	content.add_child(stage)
 	var art := TextureRect.new()
@@ -834,10 +835,10 @@ func build_mine() -> void:
 	mine_effect_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mine_effect_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stage.add_child(mine_effect_layer)
-	mine_status = make_label("", 24)
+	mine_status = make_label("", 21)
 	content.add_child(mine_status)
 	mine_energy_bar = ProgressBar.new()
-	mine_energy_bar.custom_minimum_size.y = 22
+	mine_energy_bar.custom_minimum_size.y = 15
 	mine_energy_bar.show_percentage = false
 	mine_energy_bar.max_value = max_mine_energy()
 	mine_energy_bar.value = mine_energy
@@ -849,7 +850,7 @@ func build_mine() -> void:
 	mine_result_label = make_label(last_mine_find, 19)
 	content.add_child(mine_result_label)
 	var dig := make_button("곡괭이질  +%s원 / 광석 %d개" % [number(float(20 * (pickaxe_level + drill_level) * mine_depth) * prestige_multiplier() * mine_zone_bonus() * soul_mining_multiplier()), maxi(1, int(ceil(float(pickaxe_level + drill_level) * soul_mining_multiplier())))])
-	dig.custom_minimum_size.y = 105
+	dig.custom_minimum_size.y = 82
 	decorate_button(dig, true)
 	dig.disabled = mine_energy < 1.0
 	dig.pressed.connect(mine_dig)
