@@ -274,7 +274,7 @@ func perform_rebirth() -> void:
 	run_earned = 0.0
 	tap_level = 1
 	auto_level = 0
-	business_levels = [0, 0, 0]
+	business_levels = [0, 0, 0, 0, 0]
 	mine_depth = 1
 	pickaxe_level = 1
 	ore = 0
@@ -488,7 +488,7 @@ func mine_dig() -> void:
 		return
 	mine_energy -= 1.0
 	var reward := float(20 * pickaxe_level * mine_depth)
-	reward *= prestige_multiplier()
+	reward *= prestige_multiplier() * mine_zone_bonus()
 	money += reward
 	run_earned += reward
 	ore += pickaxe_level
@@ -534,17 +534,42 @@ func mine_upgrade_pickaxe() -> void:
 	save_game()
 	refresh()
 
+func mine_zone_name() -> String:
+	if mine_depth >= 50:
+		return "심연의 수정동굴"
+	if mine_depth >= 25:
+		return "잊힌 금맥"
+	if mine_depth >= 10:
+		return "푸른 광맥"
+	return "버려진 폐광"
+
+func mine_zone_bonus() -> float:
+	if mine_depth >= 50:
+		return 4.0
+	if mine_depth >= 25:
+		return 2.5
+	if mine_depth >= 10:
+		return 1.5
+	return 1.0
+
 func mine_go_deeper() -> void:
 	var cost := mine_depth_cost()
 	if ore < cost:
 		return
 	ore -= cost
 	mine_depth += 1
+	if mine_depth % 5 == 0:
+		var bonus := maxi(1, int(mine_depth / 5))
+		gems += bonus
+		last_mine_find = "지하 %d층 돌파! 보석 %d개 보상" % [mine_depth, bonus]
+	else:
+		last_mine_find = "지하 %d층 도착" % mine_depth
 	save_game()
 	refresh()
 
 func build_mine() -> void:
-	content.add_child(make_label("폐광 탐험  ·  지하 %d층" % mine_depth, 31))
+	content.add_child(make_label("%s  ·  지하 %d층" % [mine_zone_name(), mine_depth], 31))
+	content.add_child(make_label("지역 채굴 수익 x%.1f  |  5층마다 보석 보상" % mine_zone_bonus(), 19))
 	var stage := Control.new()
 	stage.custom_minimum_size.y = 230
 	stage.clip_contents = true
@@ -573,7 +598,7 @@ func build_mine() -> void:
 	mine_energy_bar.add_theme_stylebox_override("fill", panel_style(Color("#c79b51"), Color("#e6c479"), 0))
 	content.add_child(mine_energy_bar)
 	content.add_child(make_label("보석 ◆ %d개   |   %s" % [gems, last_mine_find], 21))
-	var dig := make_button("곡괭이질  +%s원 / 광석 %d개" % [number(float(20 * pickaxe_level * mine_depth) * prestige_multiplier()), pickaxe_level])
+	var dig := make_button("곡괭이질  +%s원 / 광석 %d개" % [number(float(20 * pickaxe_level * mine_depth) * prestige_multiplier() * mine_zone_bonus()), pickaxe_level])
 	dig.custom_minimum_size.y = 105
 	decorate_button(dig, true)
 	dig.disabled = mine_energy < 1.0
