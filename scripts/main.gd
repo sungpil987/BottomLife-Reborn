@@ -18,6 +18,8 @@ var pop_tween: Tween
 var street_stage: Control
 var float_layer: Control
 var tab_buttons: Array[Button] = []
+var tap_cost_label: Label
+var auto_cost_label: Label
 
 func _ready() -> void:
 	load_game()
@@ -111,6 +113,10 @@ func build_ui() -> void:
 	add_child(bg)
 	var outer := VBoxContainer.new()
 	outer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	outer.offset_left = 12.0
+	outer.offset_right = -12.0
+	outer.offset_top = 12.0
+	outer.offset_bottom = -12.0
 	outer.add_theme_constant_override("separation", 8)
 	add_child(outer)
 	var top := PanelContainer.new()
@@ -125,7 +131,7 @@ func build_ui() -> void:
 	top_box.add_child(income_label)
 	content = VBoxContainer.new()
 	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content.add_theme_constant_override("separation", 16)
+	content.add_theme_constant_override("separation", 8)
 	outer.add_child(content)
 	var bottom := HBoxContainer.new()
 	bottom.custom_minimum_size.y = 104
@@ -164,6 +170,8 @@ func number(n: float) -> String:
 
 func refresh() -> void:
 	hero_sprite = null
+	tap_cost_label = null
+	auto_cost_label = null
 	street_stage = null
 	float_layer = null
 	tap_upgrade_button = null
@@ -212,10 +220,10 @@ func build_street() -> void:
 	hero.texture = load("res://assets/hero.svg")
 	hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	hero.anchor_left = 0.19
-	hero.anchor_right = 0.81
-	hero.anchor_top = 0.18
-	hero.anchor_bottom = 0.90
+	hero.anchor_left = 0.31
+	hero.anchor_right = 0.69
+	hero.anchor_top = 0.36
+	hero.anchor_bottom = 0.88
 	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(hero)
 	hero_sprite = hero
@@ -239,17 +247,35 @@ func build_street() -> void:
 	scene_area.add_child(feedback)
 	content.add_child(make_label("능력 강화", 27))
 	var tap_cost := 100.0 * pow(1.35, tap_level - 1)
-	var tap_upgrade := make_button("터치 수익 Lv.%d    |    %s원" % [tap_level, number(tap_cost)])
+	var tap_row := HBoxContainer.new()
+	tap_row.custom_minimum_size.y = 82
+	content.add_child(tap_row)
+	var tap_info := VBoxContainer.new()
+	tap_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tap_row.add_child(tap_info)
+	tap_info.add_child(make_label("터치 수익 · Lv.%d" % tap_level, 23))
+	tap_info.add_child(make_label("%s원 → %s원 / 터치" % [number(tap_level * 10.0), number((tap_level + 1) * 10.0)], 18))
+	var tap_upgrade := make_button("강화\n%s원" % number(tap_cost))
+	tap_upgrade.custom_minimum_size = Vector2(190, 82)
 	tap_upgrade.disabled = money < tap_cost
 	tap_upgrade.pressed.connect(buy_tap)
-	content.add_child(tap_upgrade)
+	tap_row.add_child(tap_upgrade)
 	tap_upgrade_button = tap_upgrade
 	decorate_button(tap_upgrade, true)
 	var auto_cost := 250.0 * pow(1.42, auto_level)
-	var auto_upgrade := make_button("자동 수익 Lv.%d    |    %s원" % [auto_level, number(auto_cost)])
+	var auto_row := HBoxContainer.new()
+	auto_row.custom_minimum_size.y = 82
+	content.add_child(auto_row)
+	var auto_info := VBoxContainer.new()
+	auto_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	auto_row.add_child(auto_info)
+	auto_info.add_child(make_label("자동 수익 · Lv.%d" % auto_level, 23))
+	auto_info.add_child(make_label("%s원 → %s원 / 초" % [number(auto_level * 5.0), number((auto_level + 1) * 5.0)], 18))
+	var auto_upgrade := make_button("강화\n%s원" % number(auto_cost))
+	auto_upgrade.custom_minimum_size = Vector2(190, 82)
 	auto_upgrade.disabled = money < auto_cost
 	auto_upgrade.pressed.connect(buy_auto)
-	content.add_child(auto_upgrade)
+	auto_row.add_child(auto_upgrade)
 	auto_upgrade_button = auto_upgrade
 	decorate_button(auto_upgrade, true)
 
