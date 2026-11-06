@@ -70,8 +70,8 @@ func _draw() -> void:
 	# Animated hands, shoes and clothing details are separate pixel layers.
 	var swing := roundi(sin(elapsed * 3.0) * 1.0)
 	for side in [-1, 1]:
-		var hand_x := 1 if side < 0 else 22
-		var hand_y := 19 + swing * side
+		var hand_x: int = 1 if side < 0 else 22
+		var hand_y: int = 19 + swing * side
 		draw_rect(Rect2(hand_x * tile, hand_y * tile, 3 * tile, 5 * tile), Color("#484350"))
 		draw_rect(Rect2(hand_x * tile, (hand_y + 5) * tile, 3 * tile, 2 * tile), Color("#c58c72"))
 	draw_rect(Rect2(9 * tile, 18 * tile, 7 * tile, tile), Color("#8a7a74"))
