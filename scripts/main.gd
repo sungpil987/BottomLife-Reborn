@@ -455,6 +455,7 @@ func build_mine() -> void:
 	content.add_child(make_label("폐광 탐험  ·  지하 %d층" % mine_depth, 31))
 	var art := TextureRect.new()
 	art.texture = load("res://assets/mine_cave.svg")
+	art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	art.custom_minimum_size.y = 230
@@ -542,6 +543,7 @@ func build_street() -> void:
 	street_stage = scene_area
 	var backdrop := TextureRect.new()
 	backdrop.texture = load("res://assets/street_pixel.svg")
+	backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -559,12 +561,13 @@ func build_street() -> void:
 	scene_area.add_child(rain)
 	# Reliable texture fallback until procedural sprite is verified on Android.
 	var hero := TextureRect.new()
-	hero.texture = load("res://assets/hero_v2.svg")
+	hero.texture = load("res://assets/hero_pixel.svg")
 	hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	hero.anchor_left = 0.27
-	hero.anchor_right = 0.73
-	hero.anchor_top = 0.32
+	hero.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	hero.anchor_left = 0.31
+	hero.anchor_right = 0.69
+	hero.anchor_top = 0.16
 	hero.anchor_bottom = 0.91
 	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(hero)
