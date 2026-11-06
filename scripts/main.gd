@@ -642,14 +642,19 @@ func build_street() -> void:
 	hero.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	hero.anchor_left = 0.31
 	hero.anchor_right = 0.69
-	hero.anchor_top = 0.16
-	hero.anchor_bottom = 0.91
+	hero.anchor_top = 0.18
+	hero.anchor_bottom = 0.89
 	hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(hero)
 	hero_sprite = hero
+	var foreground := Control.new()
+	foreground.set_script(load("res://scripts/street_foreground.gd"))
+	foreground.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	foreground.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scene_area.add_child(foreground)
 	hero_blink_clock = 0.0
 	hero_blink_active = false
-	hero.pivot_offset = Vector2(120, 180)
+	hero.pivot_offset = Vector2(120, 165)
 	hero_idle_tween = create_tween().set_loops()
 	hero_idle_tween.tween_property(hero, "position:y", hero.position.y - 5.0, 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	hero_idle_tween.tween_property(hero, "position:y", hero.position.y, 1.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
@@ -672,7 +677,7 @@ func build_street() -> void:
 	feedback.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scene_area.add_child(feedback)
-	content.add_child(make_label("능력 강화", 27))
+	content.add_child(make_label("생존 능력 강화", 25))
 	var tap_cost := 100.0 * pow(1.35, tap_level - 1)
 	var tap_row := HBoxContainer.new()
 	tap_row.custom_minimum_size.y = 82
