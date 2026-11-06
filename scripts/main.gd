@@ -21,6 +21,7 @@ var growth_buttons: Array[Button] = []
 var mine_energy: float = 10.0
 var mine_buttons: Array[Button] = []
 var mine_status: Label
+var mine_energy_bar: ProgressBar
 var mine_art: TextureRect
 var mine_effect_layer: Control
 var mine_flash_tween: Tween
@@ -78,6 +79,9 @@ func _process(delta: float) -> void:
 	mine_energy = minf(max_mine_energy(), mine_energy + delta * (0.4 + float(stamina_level) * 0.08))
 	if is_instance_valid(mine_status):
 		mine_status.text = "곡괭이 Lv.%d  |  기력 %d/%d  |  광석 %d개" % [pickaxe_level, int(mine_energy), int(max_mine_energy()), ore]
+	if is_instance_valid(mine_energy_bar):
+		mine_energy_bar.max_value = max_mine_energy()
+		mine_energy_bar.value = mine_energy
 	if save_clock >= 10.0:
 		save_clock = 0.0
 		save_game()
@@ -152,13 +156,13 @@ func panel_style(bg: Color, outline: Color, radius: int = 16) -> StyleBoxFlat:
 	return style
 
 func decorate_button(button: Button, gold: bool = false) -> void:
-	var normal := panel_style(Color("#bc8849") if gold else Color("#24232d"), Color("#f0c47a") if gold else Color("#75614f"))
-	var hover := panel_style(Color("#d9a55b") if gold else Color("#37323c"), Color("#ffe1a0"))
-	var pressed := panel_style(Color("#94652f") if gold else Color("#171720"), Color("#f0c47a"))
+	var normal := panel_style(Color("#bc8849") if gold else Color("#24232d"), Color("#f0c47a") if gold else Color("#75614f"), 2)
+	var hover := panel_style(Color("#d9a55b") if gold else Color("#37323c"), Color("#ffe1a0"), 2)
+	var pressed := panel_style(Color("#94652f") if gold else Color("#171720"), Color("#f0c47a"), 2)
 	button.add_theme_stylebox_override("normal", normal)
 	button.add_theme_stylebox_override("hover", hover)
 	button.add_theme_stylebox_override("pressed", pressed)
-	button.add_theme_stylebox_override("disabled", panel_style(Color("#25242b"), Color("#4c4441")))
+	button.add_theme_stylebox_override("disabled", panel_style(Color("#25242b"), Color("#4c4441"), 2))
 	button.add_theme_color_override("font_color", Color("#16151b") if gold else Color("#f8e6c9"))
 	button.add_theme_color_override("font_disabled_color", Color("#a29b95"))
 	button.add_theme_color_override("font_hover_color", Color("#16151b") if gold else Color("#ffffff"))
@@ -205,7 +209,7 @@ func build_ui() -> void:
 	add_child(outer)
 	var top := PanelContainer.new()
 	top.custom_minimum_size.y = 104
-	top.add_theme_stylebox_override("panel", panel_style(Color("#1e1b26"), Color("#ad8652"), 8))
+	top.add_theme_stylebox_override("panel", panel_style(Color("#1e1b26"), Color("#ad8652"), 2))
 	outer.add_child(top)
 	var top_box := VBoxContainer.new()
 	top_box.add_theme_constant_override("separation", 4)
@@ -300,6 +304,14 @@ func build_rebirth() -> void:
 	content.add_child(make_label("환생 %d회  |  영혼 %d개" % [rebirth_count, soul_points], 27))
 	content.add_child(make_label("영구 수익 배율  x%.1f" % prestige_multiplier(), 27))
 	content.add_child(make_label("이번 회차 누적 획득  %s원" % number(run_earned), 22))
+	var progress := ProgressBar.new()
+	progress.custom_minimum_size.y = 22
+	progress.show_percentage = false
+	progress.max_value = 1000000.0
+	progress.value = minf(run_earned, 1000000.0)
+	progress.add_theme_stylebox_override("background", panel_style(Color("#191923"), Color("#554b43"), 0))
+	progress.add_theme_stylebox_override("fill", panel_style(Color("#b68dce"), Color("#e2b7fc"), 0))
+	content.add_child(progress)
 	content.add_child(make_label("환생 조건: 회차 누적 100만원", 20))
 	var reward := rebirth_reward()
 	content.add_child(make_label("현재 환생 보상: 영혼 %d개" % reward, 24))
@@ -359,7 +371,7 @@ func build_business() -> void:
 	scroll.add_child(rows)
 	for i in range(3):
 		var panel := PanelContainer.new()
-		panel.add_theme_stylebox_override("panel", panel_style(Color("#24212c"), Color("#826744"), 12))
+		panel.add_theme_stylebox_override("panel", panel_style(Color("#24212c"), Color("#826744"), 2))
 		rows.add_child(panel)
 		var row := HBoxContainer.new()
 		panel.add_child(row)
@@ -512,6 +524,14 @@ func build_mine() -> void:
 	stage.add_child(mine_effect_layer)
 	mine_status = make_label("", 24)
 	content.add_child(mine_status)
+	mine_energy_bar = ProgressBar.new()
+	mine_energy_bar.custom_minimum_size.y = 22
+	mine_energy_bar.show_percentage = false
+	mine_energy_bar.max_value = max_mine_energy()
+	mine_energy_bar.value = mine_energy
+	mine_energy_bar.add_theme_stylebox_override("background", panel_style(Color("#191923"), Color("#554b43"), 0))
+	mine_energy_bar.add_theme_stylebox_override("fill", panel_style(Color("#c79b51"), Color("#e6c479"), 0))
+	content.add_child(mine_energy_bar)
 	content.add_child(make_label("보석 ◆ %d개   |   %s" % [gems, last_mine_find], 21))
 	var dig := make_button("곡괭이질  +%s원 / 광석 %d개" % [number(float(20 * pickaxe_level * mine_depth)), pickaxe_level])
 	dig.custom_minimum_size.y = 105
@@ -554,6 +574,7 @@ func refresh() -> void:
 	growth_buttons.clear()
 	mine_buttons.clear()
 	mine_status = null
+	mine_energy_bar = null
 	mine_art = null
 	mine_effect_layer = null
 	if hero_idle_tween and hero_idle_tween.is_running():
