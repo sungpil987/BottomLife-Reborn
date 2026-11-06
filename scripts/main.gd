@@ -153,7 +153,16 @@ func parse_save_json(raw: String) -> Variant:
 	var parser := JSON.new()
 	if parser.parse(raw) != OK:
 		return null
-	return parser.data if parser.data is Dictionary else null
+	if not (parser.data is Dictionary):
+		return null
+	var data: Dictionary = parser.data
+	# Reject syntactically valid but incomplete saves; fall back to a known-good backup.
+	for required_key in ["money", "tap_level", "business_levels", "mine_depth", "rebirth_count", "saved_at"]:
+		if not data.has(required_key):
+			return null
+	if not (data["business_levels"] is Array) or not (data["money"] is float or data["money"] is int):
+		return null
+	return data
 
 func load_game() -> void:
 	var data: Variant = null
