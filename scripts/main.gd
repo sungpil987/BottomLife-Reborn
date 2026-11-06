@@ -310,6 +310,7 @@ func refresh_upgrade_buttons() -> void:
 		mine_result_label.text = last_mine_find
 	if is_instance_valid(mine_sell_button):
 		mine_sell_button.disabled = rare_ore <= 0
+		mine_sell_button.text = mine_sale_button_text()
 	for kind in range(mine_craft_buttons.size()):
 		if is_instance_valid(mine_craft_buttons[kind]):
 			var level := drill_level if kind == 0 else refinery_level
@@ -945,7 +946,7 @@ func craft_equipment(kind: int) -> void:
 func sell_rare_ore() -> void:
 	if rare_ore <= 0:
 		return
-	var income := float(rare_ore) * 2500.0 * float(mine_depth) * prestige_multiplier() * (1.0 + float(refinery_level) * 0.1)
+	var income := mine_sale_total()
 	money += income
 	run_earned += income
 	lifetime_earned += income
@@ -1006,6 +1007,14 @@ func mine_go_deeper() -> void:
 		last_mine_find = "지하 %d층 도착" % mine_depth
 	save_game()
 	refresh()
+
+func mine_sale_total() -> float:
+	return float(rare_ore) * 2500.0 * float(mine_depth) * prestige_multiplier() * (1.0 + float(refinery_level) * 0.1)
+
+func mine_sale_button_text() -> String:
+	if rare_ore <= 0:
+		return "희귀 광물 없음 · 채굴로 획득"
+	return "희귀 광물 %d개 판매 · 총 %s원" % [rare_ore, number(mine_sale_total())]
 
 func mine_status_text() -> String:
 	var energy_rate: float = 0.4 + float(stamina_level) * 0.08
@@ -1097,7 +1106,7 @@ func build_mine() -> void:
 		craft.pressed.connect(craft_equipment.bind(kind))
 		equipment_row.add_child(craft)
 		mine_craft_buttons.append(craft)
-	var sell := make_button("희귀 광물 %d개 판매 · 총 %s원" % [rare_ore, number(float(rare_ore * 2500 * mine_depth) * prestige_multiplier() * (1.0 + float(refinery_level) * 0.1))])
+	var sell := make_button(mine_sale_button_text())
 	sell.custom_minimum_size.y = 64
 	sell.disabled = rare_ore <= 0
 	sell.pressed.connect(sell_rare_ore)
