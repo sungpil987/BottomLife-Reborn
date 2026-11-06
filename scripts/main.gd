@@ -397,9 +397,9 @@ func build_rebirth() -> void:
 	content.add_child(button)
 	content.add_child(make_label("환생 업적 · 영구 보상", 25))
 	for i in range(LEGACY_MILESTONES.size()):
-		var milestone := LEGACY_MILESTONES[i]
-		var claimed := claimed_legacy.has(milestone)
-		var achieved := rebirth_count >= milestone
+		var milestone: int = LEGACY_MILESTONES[i]
+		var claimed: bool = claimed_legacy.has(milestone)
+		var achieved: bool = rebirth_count >= milestone
 		var status := "수령 완료" if claimed else ("보상 받기" if achieved else "잠김")
 		var legacy_button := make_button("환생 %d회 달성 · 영혼 +%d\n%s" % [milestone, LEGACY_REWARDS[i], status])
 		legacy_button.disabled = claimed or not achieved
