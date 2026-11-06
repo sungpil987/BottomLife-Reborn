@@ -339,21 +339,25 @@ func make_button(value: String) -> Button:
 	decorate_button(button)
 	return button
 
+func compact_screen() -> bool:
+	return get_viewport_rect().size.y < 760.0
+
 func build_ui() -> void:
+	var compact: bool = compact_screen()
 	var bg := ColorRect.new()
 	bg.color = Color("#111016")
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	var outer := VBoxContainer.new()
 	outer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	outer.offset_left = 10.0
-	outer.offset_right = -10.0
-	outer.offset_top = 8.0
-	outer.offset_bottom = -8.0
+	outer.offset_left = 6.0 if compact else 10.0
+	outer.offset_right = -6.0 if compact else -10.0
+	outer.offset_top = 4.0 if compact else 8.0
+	outer.offset_bottom = -4.0 if compact else -8.0
 	outer.add_theme_constant_override("separation", 6)
 	add_child(outer)
 	var top := PanelContainer.new()
-	top.custom_minimum_size.y = 88
+	top.custom_minimum_size.y = 72 if compact else 88
 	top.add_theme_stylebox_override("panel", panel_style(Color("#1e1b26"), Color("#ad8652"), 2))
 	outer.add_child(top)
 	var top_box := VBoxContainer.new()
@@ -364,24 +368,24 @@ func build_ui() -> void:
 	hud_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hud_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(hud_frame)
-	header = make_label("", 25)
+	header = make_label("", 22 if compact else 25)
 	top_box.add_child(header)
-	income_label = make_label("", 18)
+	income_label = make_label("", 16 if compact else 18)
 	top_box.add_child(income_label)
 	content = VBoxContainer.new()
 	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 8)
 	outer.add_child(content)
 	var bottom := HBoxContainer.new()
-	bottom.custom_minimum_size.y = 64
+	bottom.custom_minimum_size.y = 54 if compact else 64
 	bottom.add_theme_constant_override("separation", 3)
 	outer.add_child(bottom)
 	var tabs := ["거리", "사업", "광산", "성장", "메뉴"]
 	for i in range(tabs.size()):
 		var b := make_button(tabs[i])
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.add_theme_font_size_override("font_size", 17)
-		b.custom_minimum_size.y = 62
+		b.add_theme_font_size_override("font_size", 15 if compact else 17)
+		b.custom_minimum_size.y = 52 if compact else 62
 		decorate_button(b, i == current_tab)
 		b.pressed.connect(change_tab.bind(i))
 		bottom.add_child(b)
@@ -392,6 +396,8 @@ func build_ui() -> void:
 		tab_buttons.append(b)
 
 func change_tab(index: int) -> void:
+	if index < 0 or index >= tab_buttons.size():
+		return
 	if index == current_tab:
 		return
 	if is_instance_valid(detail_scroll):
@@ -648,7 +654,7 @@ func build_business() -> void:
 		notice.add_theme_color_override("font_color", Color("#f7d38a"))
 		content.add_child(notice)
 	var business_stage := Control.new()
-	business_stage.custom_minimum_size.y = 156
+	business_stage.custom_minimum_size.y = 116 if compact_screen() else 156
 	business_stage.clip_contents = true
 	content.add_child(business_stage)
 	var art := TextureRect.new()
@@ -990,7 +996,7 @@ func build_mine() -> void:
 	if next_mine_rebirth_requirement() > rebirth_count:
 		content.add_child(make_label("다음 지역 잠김 · 환생 %d회 필요" % next_mine_rebirth_requirement(), 20))
 	var stage := Control.new()
-	stage.custom_minimum_size.y = 152
+	stage.custom_minimum_size.y = 116 if compact_screen() else 152
 	stage.clip_contents = true
 	content.add_child(stage)
 	var art := TextureRect.new()
@@ -1214,7 +1220,7 @@ func build_street() -> void:
 	if offline_report != "":
 		content.add_child(make_label(offline_report, 19))
 	var scene_area := Control.new()
-	scene_area.custom_minimum_size.y = 240
+	scene_area.custom_minimum_size.y = 190 if compact_screen() else 240
 	scene_area.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	scene_area.clip_contents = true
 	content.add_child(scene_area)
